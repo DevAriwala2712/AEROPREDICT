@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AERO-CORE | Live Prediction Panel</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = { darkMode:"class", theme:{ extend:{ fontFamily:{ headline:["Inter"], body:["Inter"] } } } }
+</script>
+<style>
+  body { background-color:#000; color:#fff; font-family:'Inter',sans-serif; }
+  .material-symbols-outlined { font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; }
+  .waveform-grid { background-image:linear-gradient(#1c1c1c 1px, transparent 1px), linear-gradient(90deg,#1c1c1c 1px,transparent 1px); background-size:20px 20px; }
+
+  /* Sweep line — clipped by overflow-hidden parent */
+  @keyframes sweep { 0%{left:0%} 100%{left:100%} }
+  .sweep-line { animation:sweep 3s linear infinite; position:absolute; top:0; bottom:0; left:0; width:3px;
+    background:linear-gradient(to bottom,transparent,rgba(249,115,22,.7),transparent); pointer-events:none; z-index:1; }
+
+  .rul-display { transition:all .5s ease; }
+  .risk-low      { color:#2DD4BF; }
+  .risk-medium   { color:#facc15; }
+  .risk-high     { color:#F97316; }
+  .risk-critical { color:#ef4444; }
+
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .spinner-sm { border:2px solid #333; border-top-color:#F97316; border-radius:50%; width:16px; height:16px;
+    animation:spin .7s linear infinite; display:inline-block; vertical-align:middle; }
+
+  /* Mode selector tab */
+  .mode-tab { cursor:pointer; padding:.4rem 1rem; border:1px solid #3f3f46; border-radius:.5rem;
+    font-size:.7rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; transition:all .2s; }
+  .mode-tab.active { background:#F97316; color:#000; border-color:#F97316; }
+  .mode-tab:not(.active):hover { border-color:#F97316; color:#F97316; }
+
+  /* Dataset pill */
+  .ds-pill { cursor:pointer; padding:.3rem .75rem; border:1px solid #3f3f46; border-radius:999px;
+    font-size:.65rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; transition:all .15s; }
+  .ds-pill.active-fd1 { background:rgba(56,189,248,.15); color:#38bdf8; border-color:#38bdf8; }
+  .ds-pill.active-fresh { background:rgba(163,230,53,.12); color:#a3e635; border-color:#a3e635; }
+  .ds-pill:not([class*=active]):hover { border-color:#71717a; color:#e4e4e7; }
+
+  .fresh-badge { font-size:.6rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
+    padding:.15rem .5rem; border-radius:999px; background:rgba(163,230,53,.15); color:#a3e635; border:1px solid #a3e635; }
+  .known-badge { font-size:.6rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
+    padding:.15rem .5rem; border-radius:999px; background:rgba(56,189,248,.15); color:#38bdf8; border:1px solid #38bdf8; }
+</style>
+</head>
+<body class="bg-black text-white antialiased">
+
+<!-- TopNavBar -->
+<header class="bg-black/90 backdrop-blur-sm border-b border-zinc-800 flex justify-between items-center w-full px-6 h-16 fixed z-50 top-0">
+  <div class="text-xl font-bold uppercase tracking-widest">AERO-NAV</div>
+  <div class="flex items-center gap-4">
+    <div class="flex items-center gap-2 px-3 py-1 bg-zinc-900 rounded-full">
+      <div id="server-dot" class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+      <span id="server-status" class="text-xs text-zinc-400 font-medium">Connecting...</span>
+    </div>
+  </div>
+</header>
+
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-screen w-64 border-r border-zinc-800 bg-zinc-950 flex flex-col py-4 pt-20 z-40">
+  <div class="px-6 mb-6">
+    <h2 class="text-orange-500 font-black text-lg">AERO-CORE</h2>
+    <p class="text-zinc-500 text-[10px] tracking-widest uppercase">V2.4.0-Active</p>
+  </div>
+  <nav class="flex-1 px-4 space-y-1">
+    <a class="flex items-center px-4 py-3 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 transition-colors text-sm font-medium uppercase tracking-wider" href="Main_Dashboard.html">
+      <span class="material-symbols-outlined mr-3">dashboard</span>Dashboard
+    </a>
+    <a class="flex items-center px-4 py-3 text-orange-500 bg-orange-500/5 border-r-2 border-orange-500 text-sm font-medium uppercase tracking-wider" href="Live_Prediction_Panel.html">
+      <span class="material-symbols-outlined mr-3">query_stats</span>Live Prediction
+    </a>
+    <a class="flex items-center px-4 py-3 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 transition-colors text-sm font-medium uppercase tracking-wider" href="Model_Insights.html">
+      <span class="material-symbols-outlined mr-3">insights</span>Model Insights
+    </a>
+    <a class="flex items-center px-4 py-3 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 transition-colors text-sm font-medium uppercase tracking-wider" href="Model_Details_Architecture.html">
+      <span class="material-symbols-outlined mr-3">analytics</span>Model Details
+    </a>
+    <a class="flex items-center px-4 py-3 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 transition-colors text-sm font-medium uppercase tracking-wider" href="Data_Explorer.html">
+      <span class="material-symbols-outlined mr-3">database</span>Data Explorer
+    </a>
+    <a class="flex items-center px-4 py-3 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 transition-colors text-sm font-medium uppercase tracking-wider" href="API_Deployment_Demo.html">
+      <span class="material-symbols-outlined mr-3">api</span>API Demo
+    </a>
+  </nav>
+</aside>
+
+<!-- Main Content -->
+<main class="md:ml-64 pt-20 min-h-screen bg-black">
+  <div class="max-w-7xl mx-auto p-6 space-y-6">
+
+    <!-- Page header -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2 text-orange-500 mb-1">
+          <span class="material-symbols-outlined text-sm">sensors</span>
+          <span class="text-[10px] font-bold uppercase tracking-widest">Real-Time Model Evaluation</span>
+        </div>
+        <h1 class="text-4xl font-black tracking-tighter uppercase italic">Live Prediction Panel</h1>
+      </div>
+
+      <!-- Model meta -->
+      <div class="flex gap-4 items-center bg-zinc-900/70 border border-zinc-800 rounded-xl p-3 px-5">
+        <div class="flex flex-col">
+          <span class="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">Model</span>
+          <span class="text-white font-mono font-bold text-sm">LSTM-RUL</span>
+        </div>
+        <div class="h-8 w-px bg-zinc-800"></div>
+        <div class="flex flex-col">
+          <span class="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">Trained On</span>
+          <span class="text-blue-400 font-mono font-bold text-sm">FD001</span>
+        </div>
+        <div class="h-8 w-px bg-zinc-800"></div>
+        <div class="flex flex-col">
+          <span class="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">Best Epoch</span>
+          <span id="best-epoch" class="text-white font-mono font-bold text-sm">--</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         TESTING MODE SELECTOR BAR
+    ══════════════════════════════════════════════════════ -->
+    <div class="bg-zinc-950 border border-zinc-700 rounded-xl p-5 space-y-4">
+      <div class="flex items-center gap-3 mb-1">
+        <span class="material-symbols-outlined text-orange-400 text-sm">science</span>
+        <span class="text-xs font-black uppercase tracking-widest text-zinc-300">Testing Mode</span>
+      </div>
+
+      <!-- Row 1: Mode tabs -->
+      <div class="flex flex-wrap gap-3 items-center">
+        <button id="tab-specific" class="mode-tab active" onclick="setMode('specific')">
+          Specific Engine
+        </button>
+        <button id="tab-random" class="mode-tab" onclick="setMode('random')">
+          ⚡ Randomise
+        </button>
+        <div class="w-px h-5 bg-zinc-700 mx-1"></div>
+        <!-- Dataset pills -->
+        <span class="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">Dataset:</span>
+        <button class="ds-pill active-fd1" id="pill-FD001" onclick="setDataset('FD001')">FD001 <span class="text-[9px] opacity-70">(trained)</span></button>
+        <button class="ds-pill" id="pill-FD002" onclick="setDataset('FD002')">FD002 Fresh</button>
+        <button class="ds-pill" id="pill-FD003" onclick="setDataset('FD003')">FD003 Fresh</button>
+        <button class="ds-pill" id="pill-FD004" onclick="setDataset('FD004')">FD004 Fresh</button>
+      </div>
+
+      <!-- Row 2: Dataset info + engine selector -->
+      <div class="flex flex-wrap items-center gap-5">
+        <!-- Info box -->
+        <div id="dataset-info" class="flex-1 min-w-[260px] bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 text-[11px] text-zinc-400 leading-relaxed">
+          <span id="ds-info-text">Loading dataset info...</span>
+        </div>
+
+        <!-- Engine selector (specific mode only) -->
+        <div id="engine-selector-wrap" class="flex flex-col gap-1">
+          <span class="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">Engine Unit</span>
+          <div class="relative">
+            <select id="engine-select" class="bg-zinc-900 border border-zinc-700 text-orange-400 font-mono font-bold text-sm px-3 py-2 pr-8 rounded-lg outline-none appearance-none cursor-pointer">
+              <option value="">Loading...</option>
+            </select>
+            <span class="material-symbols-outlined absolute right-2 top-2 text-zinc-500 pointer-events-none text-sm">expand_more</span>
+          </div>
+        </div>
+
+        <!-- Dataset quality metrics (updated on dataset change) -->
+        <div class="flex gap-4">
+          <div class="text-center">
+            <div id="mode-rmse" class="text-2xl font-black text-white">--</div>
+            <div class="text-[9px] text-zinc-500 uppercase font-bold tracking-wider">RMSE</div>
+          </div>
+          <div class="text-center">
+            <div id="mode-mae" class="text-2xl font-black text-white">--</div>
+            <div class="text-[9px] text-zinc-500 uppercase font-bold tracking-wider">MAE</div>
+          </div>
+          <div class="text-center">
+            <div id="mode-engines" class="text-2xl font-black text-white">--</div>
+            <div class="text-[9px] text-zinc-500 uppercase font-bold tracking-wider">ENGINES</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Left col: charts -->
+      <div class="lg:col-span-8 space-y-6">
+
+        <!-- Training History -->
+        <div class="bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden">
+          <div class="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/20">
+            <div class="flex items-center gap-3">
+              <span class="flex h-2 w-2 rounded-full bg-teal-500 animate-pulse"></span>
+              <span class="text-xs font-bold uppercase tracking-widest text-zinc-300">Training Progress — Loss & Val RMSE</span>
+            </div>
+            <div class="flex gap-4 text-[10px]">
+              <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-orange-500"></div><span class="text-zinc-400">Train Loss</span></div>
+              <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-teal-400"></div><span class="text-zinc-400">Val RMSE</span></div>
+            </div>
+          </div>
+          <div class="px-4 pb-4 pt-2 waveform-grid relative overflow-hidden" style="height:230px">
+            <div class="sweep-line"></div>
+            <div style="position:relative;height:100%;width:100%">
+              <canvas id="training-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scatter chart -->
+        <div class="bg-zinc-950 border border-zinc-800 rounded-xl p-5">
+          <div class="flex justify-between items-center mb-3">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-widest text-zinc-300">Actual vs Predicted RUL</span>
+              <span id="scatter-ds-label" class="ml-2 text-[10px] text-zinc-500"></span>
+            </div>
+            <div id="current-engine-dot" class="flex items-center gap-2 hidden">
+              <div class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></div>
+              <span class="text-[10px] text-orange-400 font-bold uppercase" id="current-engine-label"></span>
+            </div>
+          </div>
+          <div style="position:relative;height:240px">
+            <canvas id="scatter-chart"></canvas>
+          </div>
+          <div class="mt-3 flex gap-6 text-[10px] text-zinc-500">
+            <span>Points below diagonal: model <span class="text-teal-400 font-bold">underestimates</span> (safer)</span>
+            <span>Points above diagonal: model <span class="text-orange-400 font-bold">overestimates</span> (riskier)</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right col: prediction output -->
+      <div class="lg:col-span-4 space-y-5">
+
+        <!-- RUL card -->
+        <div class="bg-zinc-950 border border-zinc-800 rounded-xl p-6 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-4 opacity-5">
+            <span class="material-symbols-outlined text-[80px]" style="font-variation-settings:'FILL' 1">timer</span>
+          </div>
+          <!-- Dataset badge -->
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-zinc-500 text-xs font-black uppercase tracking-[0.2em]">Predicted RUL</h3>
+            <span id="data-badge" class="known-badge">FD001 · Known</span>
+          </div>
+          <div class="flex items-baseline gap-2 mb-1">
+            <span id="pred-rul" class="rul-display text-6xl font-black text-white tracking-tighter">--</span>
+            <span class="text-orange-500 font-bold text-lg uppercase italic">Cycles</span>
+          </div>
+          <div class="flex items-center gap-2 mb-1">
+            <span id="risk-icon" class="material-symbols-outlined text-sm text-teal-500">shield</span>
+            <span id="risk-label" class="text-xs font-bold uppercase tracking-wide risk-low">--</span>
+          </div>
+          <div class="text-[10px] text-zinc-500 mb-5 space-y-0.5">
+            <div>Actual RUL: <span id="actual-rul" class="text-white font-mono">--</span> cycles</div>
+            <div>Abs Error: <span id="abs-error" class="text-white font-mono">--</span> cycles</div>
+            <div>Uncertainty: ±<span id="uncertainty" class="text-white font-mono">--</span> cycles (95% CI)</div>
+            <div>Engine ID: <span id="engine-id-display" class="text-orange-400 font-mono font-bold">--</span></div>
+          </div>
+          <!-- RUL bar -->
+          <div class="space-y-2">
+            <div class="flex justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+              <span>RUL Progress</span>
+              <span id="rul-pct">--</span>
+            </div>
+            <div class="h-2 bg-zinc-800 rounded-full overflow-hidden">
+              <div id="rul-bar" class="h-full bg-gradient-to-r from-teal-500 to-teal-300 transition-all duration-700 rounded-full" style="width:0%"></div>
+            </div>
+            <div class="flex justify-between text-[10px] font-mono text-zinc-600">
+              <span id="ci-min">MIN: --</span>
+              <span id="ci-max">MAX: --</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Run button -->
+        <button id="run-btn" onclick="runPrediction()" class="w-full bg-orange-500 hover:bg-orange-600 text-black font-black uppercase tracking-widest px-8 py-4 rounded-xl flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-orange-500/20">
+          <span id="btn-label">Run Prediction</span>
+          <span class="material-symbols-outlined">play_arrow</span>
+        </button>
+
+        <!-- Diagnostics -->
+        <div class="bg-zinc-950 border border-zinc-800 rounded-xl p-5">
+          <h3 class="text-zinc-500 text-xs font-black uppercase tracking-[0.2em] mb-4">Diagnostics</h3>
+          <div id="diagnostics-list" class="space-y-2">
+            <div class="text-zinc-500 text-xs p-3">Awaiting prediction...</div>
+          </div>
+        </div>
+
+        <!-- Footer meta -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-zinc-950/50 border border-zinc-800 p-3 rounded-lg">
+            <p class="text-[10px] text-zinc-500 uppercase font-black">Test Dataset</p>
+            <p id="footer-dataset" class="text-xs font-bold text-white mt-0.5">--</p>
+          </div>
+          <div class="bg-zinc-950/50 border border-zinc-800 p-3 rounded-lg">
+            <p class="text-[10px] text-zinc-500 uppercase font-black">Dataset RMSE</p>
+            <p id="footer-rmse" class="text-xs font-bold text-white mt-0.5">-- cycles</p>
+          </div>
+          <div class="bg-zinc-950/50 border border-zinc-800 p-3 rounded-lg">
+            <p class="text-[10px] text-zinc-500 uppercase font-black">Seq Length</p>
+            <p id="footer-seq" class="text-xs font-bold text-white mt-0.5">-- steps</p>
+          </div>
+          <div class="bg-zinc-950/50 border border-zinc-800 p-3 rounded-lg">
+            <p class="text-[10px] text-zinc-500 uppercase font-black">Device</p>
+            <p id="footer-device" class="text-xs font-bold text-teal-400 mt-0.5">--</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+Chart.defaults.color = '#71717a';
+Chart.defaults.borderColor = '#27272a';
+
+const API = 'http://127.0.0.1:8000';
+
+// ── State ────────────────────────────────────────────────────────────
+let mode = 'specific';          // 'specific' | 'random'
+let activeDataset = 'FD001';    // currently selected dataset
+let allPredictions = [];        // current scatter data
+let trainingChart, scatterChart;
+
+const DS_INFO = {
+  FD001: { label:'FD001 — 100 engines, 1 op condition, 1 fault mode', engines:100, note:'trained', color:'known-badge' },
+  FD002: { label:'FD002 — 260 engines, 6 op conditions, 1 fault mode', engines:260, note:'fresh', color:'fresh-badge' },
+  FD003: { label:'FD003 — 100 engines, 1 op condition, 2 fault modes', engines:100, note:'fresh', color:'fresh-badge' },
+  FD004: { label:'FD004 — 249 engines, 6 op conditions, 2 fault modes', engines:249, note:'fresh', color:'fresh-badge' },
+};
+
+// ── Helpers ──────────────────────────────────────────────────────────
+const fmt = (n, d=1) => (n!=null && !isNaN(n)) ? Number(n).toFixed(d) : '--';
+
+function getRisk(rul) {
+  if (rul==null) return { label:'UNKNOWN', cls:'risk-low', icon:'help' };
+  if (rul < 20)  return { label:'CRITICAL', cls:'risk-critical', icon:'dangerous' };
+  if (rul < 60)  return { label:'HIGH',     cls:'risk-high',     icon:'warning' };
+  if (rul < 100) return { label:'MEDIUM',   cls:'risk-medium',   icon:'report' };
+  return              { label:'LOW',      cls:'risk-low',      icon:'shield' };
+}
+
+function setButtonLoading(loading) {
+  const lbl = document.getElementById('btn-label');
+  const btn = document.getElementById('run-btn');
+  if (loading) {
+    lbl.innerHTML = '<span class="spinner-sm"></span> Running...';
+    btn.disabled = true; btn.classList.add('opacity-70');
+  } else {
+    lbl.textContent = 'Run Prediction';
+    btn.disabled = false; btn.classList.remove('opacity-70');
+  }
+}
+
+// ── Mode / Dataset control ────────────────────────────────────────────
+function setMode(m) {
+  mode = m;
+  document.getElementById('tab-specific').classList.toggle('active', m==='specific');
+  document.getElementById('tab-random').classList.toggle('active', m==='random');
+  document.getElementById('engine-selector-wrap').style.display = m==='specific' ? '' : 'none';
+}
+
+async function setDataset(ds) {
+  activeDataset = ds;
+
+  // Update pill styles
+  ['FD001','FD002','FD003','FD004'].forEach(d => {
+    const pill = document.getElementById(`pill-${d}`);
+    pill.className = 'ds-pill' + (d===ds ? (d==='FD001'?' active-fd1':' active-fresh') : '');
+  });
+
+  // Dataset info line
+  const info = DS_INFO[ds] || {};
+  document.getElementById('ds-info-text').innerHTML =
+    `<strong class="text-zinc-200">${ds}</strong> — ${info.label || ''}`
+    + (ds !== 'FD001' ? ' &nbsp;<span class="fresh-badge">Unseen by model · Genuine cross-dataset test</span>' : ' &nbsp;<span class="known-badge">Model\'s own test split</span>');
+
+  // Update badge on RUL card
+  const badge = document.getElementById('data-badge');
+  if (ds === 'FD001') {
+    badge.textContent = 'FD001 · Known'; badge.className = 'known-badge';
+  } else {
+    badge.textContent = `${ds} · Fresh`; badge.className = 'fresh-badge';
+  }
+  document.getElementById('footer-dataset').textContent = ds;
+
+  // Load engine IDs for new dataset
+  try {
+    const r = await fetch(`${API}/api/engine-ids?dataset=${ds}`);
+    if (r.ok) {
+      const ids = await r.json();
+      const sel = document.getElementById('engine-select');
+      sel.innerHTML = ids.map(id => `<option value="${id}">${ds}-ENG-${String(id).padStart(3,'0')}</option>`).join('');
+    }
+  } catch(e) {}
+
+  // Load all predictions for scatter + metrics
+  await loadScatterForDataset(ds);
+}
+
+async function loadScatterForDataset(ds) {
+  try {
+    const r = await fetch(`${API}/api/all-predictions?dataset=${ds}`);
+    const resp = await r.json();
+    if (resp.error) return;
+    allPredictions = resp.engines;
+    document.getElementById('mode-rmse').textContent = fmt(resp.rmse);
+    document.getElementById('mode-mae').textContent  = fmt(resp.mae);
+    document.getElementById('mode-engines').textContent = allPredictions.length;
+    document.getElementById('scatter-ds-label').textContent = `(${ds} · ${allPredictions.length} engines · RMSE ${fmt(resp.rmse)})`;
+    document.getElementById('footer-rmse').textContent = `${fmt(resp.rmse)} cycles`;
+    drawScatterChart(allPredictions, null);
+  } catch(e) { console.error(e); }
+}
+
+// ── Charts ────────────────────────────────────────────────────────────
+function drawTrainingChart(history) {
+  const ctx = document.getElementById('training-chart').getContext('2d');
+  if (trainingChart) trainingChart.destroy();
+  if (!history || !history.length) return;
+
+  trainingChart = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: history.map(h => h.epoch),
+      datasets:[
+        { label:'Train Loss', data:history.map(h=>h.loss), borderColor:'#F97316', backgroundColor:'rgba(249,115,22,.07)', pointRadius:0, borderWidth:2.5, fill:true, tension:.4, yAxisID:'y' },
+        { label:'Val RMSE',   data:history.map(h=>h.val_rmse), borderColor:'#2DD4BF', backgroundColor:'rgba(45,212,191,.06)', pointRadius:0, borderWidth:2.5, fill:true, tension:.4, yAxisID:'y1' }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      animation:{ duration:800, easing:'easeOutQuart' },
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ title:{ display:true, text:'Epoch', color:'#71717a', font:{size:10} }, grid:{color:'#1c1c1c'}, ticks:{color:'#71717a', maxTicksLimit:10} },
+        y:{ position:'left', title:{ display:true, text:'Loss', color:'#F97316', font:{size:10} }, grid:{color:'#1c1c1c'}, ticks:{color:'#F97316', maxTicksLimit:5} },
+        y1:{ position:'right', title:{ display:true, text:'Val RMSE', color:'#2DD4BF', font:{size:10} }, grid:{drawOnChartArea:false}, ticks:{color:'#2DD4BF', maxTicksLimit:5} }
+      }
+    }
+  });
+}
+
+function drawScatterChart(predictions, highlightId) {
+  const ctx = document.getElementById('scatter-chart').getContext('2d');
+  if (scatterChart) scatterChart.destroy();
+  if (!predictions || !predictions.length) return;
+
+  const maxVal = Math.max(...predictions.map(p => Math.max(p.actualRul, p.predictedRul)));
+  const normal = predictions.filter(p => p.engineId !== highlightId).map(p => ({ x:p.actualRul, y:p.predictedRul }));
+  const highlighted = highlightId!=null ? predictions.filter(p=>p.engineId===highlightId).map(p=>({x:p.actualRul, y:p.predictedRul})) : [];
+
+  const isFresh = activeDataset !== 'FD001';
+  const dotColor = isFresh ? 'rgba(163,230,53,.5)' : 'rgba(56,189,248,.45)';
+
+  const datasets = [{ label:'All engines', data:normal, backgroundColor:dotColor, pointRadius:4, pointHoverRadius:7 }];
+  if (highlighted.length) datasets.push({ label:'Selected', data:highlighted, backgroundColor:'#F97316', pointRadius:9, pointHoverRadius:11, pointStyle:'star' });
+  datasets.push({ label:'Perfect', data:[{x:0,y:0},{x:maxVal,y:maxVal}], type:'line', borderColor:'rgba(249,115,22,.45)', borderWidth:1.5, borderDash:[6,5], pointRadius:0, fill:false });
+
+  scatterChart = new Chart(ctx, {
+    type:'scatter', data:{ datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:{ duration:400 },
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:c=>`Actual: ${c.raw.x.toFixed(1)}, Pred: ${c.raw.y.toFixed(1)}` } } },
+      scales:{
+        x:{ title:{display:true,text:'Actual RUL (cycles)',color:'#71717a',font:{size:10}}, grid:{color:'#1c1c1c'}, ticks:{color:'#71717a'} },
+        y:{ title:{display:true,text:'Predicted RUL (cycles)',color:'#71717a',font:{size:10}}, grid:{color:'#1c1c1c'}, ticks:{color:'#71717a'} }
+      }
+    }
+  });
+}
+
+// ── Run Prediction ───────────────────────────────────────────────────
+async function runPrediction() {
+  setButtonLoading(true);
+  try {
+    const sel = document.getElementById('engine-select');
+    const isRandom = mode === 'random';
+    const engineId = isRandom ? null : parseInt(sel.value);
+
+    let url = `${API}/api/sample-prediction?dataset=${activeDataset}`;
+    if (isRandom) url += '&random=true';
+    else if (engineId) url += `&engineId=${engineId}`;
+
+    const res = await fetch(url);
+    const d = await res.json();
+    if (d.error) { alert('Error: ' + d.error); return; }
+
+    // If random, sync the dropdown
+    if (isRandom && sel) {
+      const opts = Array.from(sel.options);
+      const match = opts.find(o => parseInt(o.value) === d.engineId);
+      if (match) sel.value = d.engineId;
+    }
+
+    // Update RUL display
+    const rul = d.predictedRul;
+    document.getElementById('pred-rul').textContent = fmt(rul,1);
+    document.getElementById('actual-rul').textContent = fmt(d.actualRul,1);
+    document.getElementById('abs-error').textContent = fmt(d.absoluteError,1);
+    document.getElementById('uncertainty').textContent = fmt(d.uncertaintyStd * 1.96, 2);
+    document.getElementById('engine-id-display').textContent = `${activeDataset}-ENG-${String(d.engineId).padStart(3,'0')}`;
+
+    const maxRul = 125;
+    const pct = Math.min(100, Math.max(0, (rul/maxRul)*100));
+    document.getElementById('rul-bar').style.width = `${pct}%`;
+    document.getElementById('rul-pct').textContent = `${pct.toFixed(0)}% of max life`;
+    document.getElementById('ci-min').textContent = `MIN: ${fmt(rul - d.uncertaintyStd*1.96,1)}`;
+    document.getElementById('ci-max').textContent = `MAX: ${fmt(rul + d.uncertaintyStd*1.96,1)}`;
+
+    const risk = getRisk(rul);
+    document.getElementById('risk-icon').textContent = risk.icon;
+    document.getElementById('risk-icon').className = `material-symbols-outlined text-sm ${risk.cls}`;
+    document.getElementById('risk-label').textContent = risk.label;
+    document.getElementById('risk-label').className = `text-xs font-bold uppercase tracking-wide ${risk.cls}`;
+
+    // Highlight on scatter
+    const label = document.getElementById('current-engine-label');
+    label.textContent = `${activeDataset}-ENG-${String(d.engineId).padStart(3,'0')} selected`;
+    document.getElementById('current-engine-dot').classList.remove('hidden');
+    drawScatterChart(allPredictions, d.engineId);
+
+    // Diagnostics
+    updateDiagnostics(d);
+
+  } catch(e) {
+    alert('Cannot reach server at ' + API);
+    console.error(e);
+  } finally {
+    setButtonLoading(false);
+  }
+}
+
+function updateDiagnostics(d) {
+  const isFresh = d.isFreshData;
+  const items = [
+    { icon:'timelapse',   label:'Predicted RUL',         value:`${fmt(d.predictedRul,1)} cycles`, urgent: d.predictedRul < 50 },
+    { icon:'my_location', label:'Actual RUL',             value:`${fmt(d.actualRul,1)} cycles`,    urgent: false },
+    { icon:'difference',  label:'Absolute Error',         value:`${fmt(d.absoluteError,2)} cycles`, urgent: d.absoluteError > 25 },
+    { icon:'analytics',   label:'Uncertainty (σ)',         value:`±${fmt(d.uncertaintyStd,3)}`,     urgent: d.uncertaintyStd > 15 },
+    { icon:'database',    label:'Data Source',            value: isFresh ? `${d.dataset} (Unseen)` : `${d.dataset} (Known)`, urgent: false },
+    { icon:'memory',      label:'MC Samples',             value:`${d.mcSamples} passes`,            urgent: false },
+  ];
+  document.getElementById('diagnostics-list').innerHTML = items.map(item => `
+    <div class="flex items-center justify-between p-2.5 ${item.urgent ? 'bg-orange-500/10 border border-orange-500/20' : 'bg-zinc-900/30 border border-zinc-800/40'} rounded-lg">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-sm ${item.urgent ? 'text-orange-500':'text-zinc-400'}">${item.icon}</span>
+        <span class="text-[11px] font-bold uppercase ${item.urgent ? 'text-orange-400':'text-zinc-300'}">${item.label}</span>
+      </div>
+      <span class="text-[11px] font-mono font-bold ${item.urgent ? 'text-orange-300':'text-white'}">${item.value}</span>
+    </div>
+  `).join('');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const [sumRes, histRes] = await Promise.all([
+      fetch(`${API}/api/summary`),
+      fetch(`${API}/api/history`)
+    ]);
+    const summary = await sumRes.json();
+    const history = await histRes.json();
+
+    document.getElementById('best-epoch').textContent  = summary.metrics.bestEpoch;
+    document.getElementById('footer-seq').textContent  = `${summary.config.seqLength} steps`;
+    document.getElementById('footer-device').textContent = summary.device;
+    document.getElementById('server-status').textContent = `Active on ${summary.device.toUpperCase()}`;
+    document.getElementById('server-dot').className = 'w-2 h-2 rounded-full bg-teal-400 animate-pulse';
+
+    drawTrainingChart(history);
+
+    // Bootstrap with FD001
+    await setDataset('FD001');
+    setMode('specific');
+    await runPrediction();
+
+  } catch(e) {
+    document.getElementById('server-status').textContent = 'Server offline';
+    document.getElementById('server-dot').className = 'w-2 h-2 rounded-full bg-red-500';
+    console.error(e);
+  }
+}
+
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

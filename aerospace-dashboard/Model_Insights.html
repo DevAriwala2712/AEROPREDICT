@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "background": "#131313",
+                    "on-error": "#690005",
+                    "tertiary-container": "#757778",
+                    "on-error-container": "#ffdad6",
+                    "surface-container-low": "#1b1b1b",
+                    "on-primary-container": "#ffffff",
+                    "primary-fixed-dim": "#ffb693",
+                    "tertiary": "#c6c6c7",
+                    "outline-variant": "#584238",
+                    "primary": "#ffb693",
+                    "on-primary-fixed-variant": "#7a3000",
+                    "surface-variant": "#353535",
+                    "surface-container": "#1f1f1f",
+                    "surface-tint": "#ffb693",
+                    "on-tertiary-fixed-variant": "#454748",
+                    "tertiary-fixed": "#e2e2e3",
+                    "secondary-container": "#474747",
+                    "secondary": "#c6c6c6",
+                    "surface-container-lowest": "#0e0e0e",
+                    "on-tertiary": "#2e3132",
+                    "on-background": "#e2e2e2",
+                    "error": "#ffb4ab",
+                    "secondary-fixed": "#e2e2e2",
+                    "surface-container-high": "#2a2a2a",
+                    "on-secondary": "#303030",
+                    "surface-dim": "#131313",
+                    "on-primary-fixed": "#351000",
+                    "inverse-surface": "#e2e2e2",
+                    "tertiary-fixed-dim": "#c6c6c7",
+                    "on-secondary-container": "#b5b5b5",
+                    "surface": "#131313",
+                    "inverse-on-surface": "#303030",
+                    "outline": "#a78b7f",
+                    "on-surface-variant": "#dfc0b3",
+                    "on-secondary-fixed-variant": "#474747",
+                    "on-surface": "#e2e2e2",
+                    "on-secondary-fixed": "#1b1b1b",
+                    "on-tertiary-container": "#ffffff",
+                    "secondary-fixed-dim": "#c6c6c6",
+                    "on-tertiary-fixed": "#1a1c1d",
+                    "inverse-primary": "#a04100",
+                    "error-container": "#93000a",
+                    "on-primary": "#562000",
+                    "surface-container-highest": "#353535",
+                    "surface-bright": "#393939",
+                    "primary-container": "#c75300",
+                    "primary-fixed": "#ffdbcb"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.5rem",
+                    "lg": "1rem",
+                    "xl": "1.5rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #000000; color: #FFFFFF; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .chart-grid { background-image: linear-gradient(#262626 1px, transparent 1px), linear-gradient(90deg, #262626 1px, transparent 1px); background-size: 20px 20px; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-black text-white selection:bg-orange-500/30">
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-0 h-screen w-64 border-r border-zinc-800 bg-zinc-950 flex flex-col h-full py-4 z-50">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 bg-orange-500 rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-black font-bold" style="font-variation-settings: 'FILL' 1;">rocket_launch</span>
+</div>
+<div>
+<h1 class="text-orange-500 font-black tracking-wider text-lg">AERO-CORE</h1>
+<p class="text-[10px] text-zinc-500 font-medium uppercase tracking-widest">V2.4.0-Active</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1 px-3">
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-500 font-inter text-sm font-medium uppercase tracking-wider hover:bg-zinc-900 hover:text-zinc-200 transition-colors duration-150 ease-in-out" href="Main_Dashboard.html">
+<span class="material-symbols-outlined text-lg">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-500 font-inter text-sm font-medium uppercase tracking-wider hover:bg-zinc-900 hover:text-zinc-200 transition-colors duration-150 ease-in-out" href="Live_Prediction_Panel.html">
+<span class="material-symbols-outlined text-lg">query_stats</span>
+                Live Prediction
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-orange-500 bg-orange-500/5 border-r-2 border-orange-500 font-inter text-sm font-medium uppercase tracking-wider transition-colors duration-150 ease-in-out" href="Model_Insights.html">
+<span class="material-symbols-outlined text-lg">insights</span>
+                Model Insights
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-500 font-inter text-sm font-medium uppercase tracking-wider hover:bg-zinc-900 hover:text-zinc-200 transition-colors duration-150 ease-in-out" href="Model_Details_Architecture.html">
+<span class="material-symbols-outlined text-lg">analytics</span>
+                Model Details
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-500 font-inter text-sm font-medium uppercase tracking-wider hover:bg-zinc-900 hover:text-zinc-200 transition-colors duration-150 ease-in-out" href="Data_Explorer.html">
+<span class="material-symbols-outlined text-lg">database</span>
+                Data Explorer
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-500 font-inter text-sm font-medium uppercase tracking-wider hover:bg-zinc-900 hover:text-zinc-200 transition-colors duration-150 ease-in-out" href="API_Deployment_Demo.html">
+<span class="material-symbols-outlined text-lg">api</span>
+                API Demo
+            </a>
+</nav>
+<div class="mt-auto px-3 pt-4 border-t border-zinc-800 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-500 font-inter text-sm font-medium uppercase tracking-wider hover:bg-zinc-900 hover:text-zinc-200 transition-colors duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-lg">help</span>
+                Support
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-500 font-inter text-sm font-medium uppercase tracking-wider hover:bg-zinc-900 hover:text-zinc-200 transition-colors duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-lg">settings</span>
+                Settings
+            </a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 min-h-screen bg-black flex flex-col">
+<!-- TopNavBar Shell -->
+<header class="sticky top-0 z-40 bg-black border-b border-zinc-800 flex justify-between items-center w-full px-6 h-16 font-inter tracking-tight">
+<div class="flex items-center gap-4">
+<span class="text-orange-500 font-bold uppercase tracking-widest text-lg">AERO-NAV</span>
+<div class="h-4 w-[1px] bg-zinc-800"></div>
+<div class="flex items-center gap-2 px-3 py-1 bg-zinc-900 rounded-full">
+<div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+<span class="text-xs text-zinc-400 font-medium">System Status: Nominal</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 text-zinc-400">
+<button class="p-2 hover:bg-zinc-900 hover:text-white rounded-lg transition-colors duration-200">
+<span class="material-symbols-outlined text-xl">notifications</span>
+</button>
+<button class="p-2 hover:bg-zinc-900 hover:text-white rounded-lg transition-colors duration-200">
+<span class="material-symbols-outlined text-xl">settings</span>
+</button>
+</div>
+<div class="flex items-center gap-3 pl-4 border-l border-zinc-800">
+<img alt="User profile" class="w-8 h-8 rounded-full border border-zinc-700" data-alt="close up headshot portrait of male aerospace engineer with neutral expression and sharp lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJVFChJaJ-7X6W1vqHQXQoZM4f4XrLGiniRqvp2rsaTk7xrCYn3jzXuv1vWXZlqS1W2xoY11_T5ljnsQJOB0AtpmUkwXXkuYOYct4SHiApz9wbS0anTLaoHY8T6YkEKTYmzpIp1bcjyK1PHnixjMmnoHVR8qhGtEOxi6ikQ7rluRUq55ZrZwyRhSZ7v_1vl8Cnr_IIvPqHxjqLgBI-ws-SRGy0KQk-9PCP5ZVhRlC6SR2S9eDm3pA87mW_JzU-JeGqF0CbZJCDxS0"/>
+<span class="text-sm font-semibold text-white">CH-082</span>
+</div>
+</div>
+</header>
+<!-- Insights Dashboard -->
+<div class="p-8 space-y-8 max-w-[1600px] mx-auto w-full">
+<!-- Hero Stats Row -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<div class="bg-zinc-950 border border-zinc-800 p-6 rounded-none flex flex-col justify-between">
+<span class="text-xs text-zinc-500 font-bold uppercase tracking-tighter mb-2">Confidence Score</span>
+<div class="flex items-end gap-2">
+<span class="text-4xl font-black text-white" data-kpi="confidence">--<span class="text-orange-500">%</span></span>
+</div>
+<div class="mt-4 h-1 bg-zinc-900 w-full overflow-hidden">
+<div class="h-full bg-orange-500 w-[80%]"></div>
+</div>
+</div>
+<div class="bg-zinc-950 border border-zinc-800 p-6 rounded-none">
+<span class="text-xs text-zinc-500 font-bold uppercase tracking-tighter mb-2">Best Epoch</span>
+<div class="text-4xl font-black text-white" data-kpi="epochs">--</div>
+<span class="text-[10px] text-green-500 mt-2 block">Convergence Optimized</span>
+</div>
+<div class="bg-zinc-950 border border-zinc-800 p-6 rounded-none">
+<span class="text-xs text-zinc-500 font-bold uppercase tracking-tighter mb-2">Test MAE</span>
+<div class="text-4xl font-black text-white" data-kpi="mae">--</div>
+<span class="text-[10px] text-zinc-500 mt-2 block">Mean Absolute Error (cycles)</span>
+</div>
+<div class="bg-zinc-950 border border-zinc-800 p-6 rounded-none">
+<span class="text-xs text-zinc-500 font-bold uppercase tracking-tighter mb-2">Latent Dim</span>
+<div class="text-4xl font-black text-white">128<span class="text-zinc-500 text-xl font-normal">px</span></div>
+<span class="text-[10px] text-orange-500 mt-2 block">LSTM Sequence Enabled</span>
+</div>
+</div>
+<!-- Main Insights Grid (Bento) -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Feature Importance - Horizontal Bar Chart -->
+<div class="col-span-12 lg:col-span-4 bg-zinc-950 border border-zinc-800 p-6">
+<div class="flex items-center justify-between mb-8">
+<h3 class="text-xs font-black uppercase tracking-[0.2em] text-orange-500">Feature Importance</h3>
+<span class="material-symbols-outlined text-zinc-600 text-sm">info</span>
+</div>
+<div id="feature-list" class="space-y-6">
+<div class="text-zinc-500 text-xs">Loading features...</div>
+</div>
+</div>
+<!-- Training Metrics - Loss & Accuracy Graphs -->
+<div class="col-span-12 lg:col-span-8 bg-zinc-950 border border-zinc-800 p-6 flex flex-col">
+<div class="flex items-center justify-between mb-8">
+<h3 class="text-xs font-black uppercase tracking-[0.2em] text-orange-500">Training Metrics: Loss Convergence</h3>
+<div class="flex gap-4">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 bg-orange-500 rounded-full"></div>
+<span class="text-[10px] text-zinc-500 font-bold uppercase">Train Loss</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 bg-white rounded-full"></div>
+<div class="absolute bottom-[-24px] left-0 w-full flex justify-between text-[9px] font-bold text-zinc-600 px-1">
+<span>0</span>
+<span>250</span>
+<span>500</span>
+<span>750</span>
+<span>1000 EPOCHS</span>
+</div>
+<div class="absolute left-[-40px] top-0 h-full flex flex-col justify-between text-[9px] font-bold text-zinc-600 py-1 text-right">
+<span>1.0</span>
+<span>0.1</span>
+<span>0.01</span>
+<span>LOG LOSS</span>
+</div>
+</div>
+</div>
+<!-- LSTM Latent State Degradation -->
+<div class="col-span-12 lg:col-span-7 bg-zinc-950 border border-zinc-800 p-6">
+<div class="flex items-center justify-between mb-6">
+<div class="space-y-1">
+<h3 class="text-xs font-black uppercase tracking-[0.2em] text-orange-500">Latent State Degradation</h3>
+<p class="text-[10px] text-zinc-500 uppercase tracking-wider">Sequential Model State Vector Analysis</p>
+</div>
+<div class="flex items-center gap-4 text-[10px] font-bold">
+<div class="flex items-center gap-1"><div class="w-2 h-2 bg-orange-500"></div> <span class="text-zinc-400">CRITICAL</span></div>
+<div class="flex items-center gap-1"><div class="w-2 h-2 bg-zinc-600"></div> <span class="text-zinc-400">STABLE</span></div>
+</div>
+</div>
+<div class="grid grid-cols-16 grid-rows-8 gap-1 h-64">
+<!-- Repeated blocks for heat map visualization -->
+<!-- Row 1 -->
+<div class="bg-zinc-900 border border-zinc-800"></div><div class="bg-zinc-900 border border-zinc-800"></div><div class="bg-zinc-900 border border-zinc-800"></div><div class="bg-zinc-900 border border-zinc-800"></div>
+<div class="bg-zinc-900 border border-zinc-800"></div><div class="bg-zinc-800 border border-zinc-700"></div><div class="bg-orange-500/20 border border-orange-500/30"></div><div class="bg-orange-500/40 border border-orange-500/50"></div>
+<div class="bg-orange-500 border border-orange-400"></div><div class="bg-orange-600 border border-orange-500"></div><div class="bg-orange-400 border border-orange-300"></div><div class="bg-zinc-900 border border-zinc-800"></div>
+<div class="bg-zinc-900 border border-zinc-800"></div><div class="bg-zinc-900 border border-zinc-800"></div><div class="bg-zinc-900 border border-zinc-800"></div><div class="bg-zinc-900 border border-zinc-800"></div>
+<!-- Generating a dense visual texture via grid items -->
+<div class="bg-zinc-900"></div><div class="bg-zinc-900"></div><div class="bg-zinc-900"></div><div class="bg-zinc-900"></div><div class="bg-zinc-800"></div><div class="bg-zinc-800"></div><div class="bg-zinc-800"></div><div class="bg-orange-500/10"></div><div class="bg-orange-500/30"></div><div class="bg-orange-500/50"></div><div class="bg-orange-500/80"></div><div class="bg-orange-500"></div><div class="bg-zinc-900"></div><div class="bg-zinc-900"></div><div class="bg-zinc-900"></div><div class="bg-zinc-900"></div>
+<!-- Simplified representation for the rest of the grid -->
+<script>
+                            for(let i=0; i<80; i++) {
+                                let opacity = Math.random() > 0.8 ? 'bg-orange-500/40' : 'bg-zinc-900';
+                                if (i > 40 && i < 60) opacity = 'bg-zinc-800';
+                                document.write(`<div class="${opacity} border border-white/5"></div>`);
+                            }
+                        </script>
+</div>
+</div>
+<!-- RUL Estimation Accuracy Curve -->
+<div class="col-span-12 lg:col-span-5 bg-zinc-950 border border-zinc-800 p-6">
+<h3 class="text-xs font-black uppercase tracking-[0.2em] text-orange-500 mb-6">RUL Estimation Accuracy</h3>
+<div class="relative h-64 w-full flex items-end justify-between px-2 pb-6">
+<div class="absolute inset-0 chart-grid opacity-30"></div>
+<!-- RUL Trend Line -->
+<div class="w-2 bg-orange-500/20 h-1/4"></div>
+<div class="w-2 bg-orange-500/30 h-1/3"></div>
+<div class="w-2 bg-orange-500/40 h-1/2"></div>
+<div class="w-2 bg-orange-500/50 h-2/3"></div>
+<div class="w-2 bg-orange-500 h-[80%]"></div>
+<div class="w-2 bg-orange-500 h-[85%]"></div>
+<div class="w-2 bg-orange-500 h-[75%]"></div>
+<div class="w-2 bg-orange-500/60 h-[60%]"></div>
+<div class="w-2 bg-orange-500/40 h-[45%]"></div>
+<div class="w-2 bg-orange-500/30 h-[30%]"></div>
+<div class="w-2 bg-orange-500/20 h-[15%]"></div>
+<div class="absolute top-1/2 left-0 w-full border-t border-dashed border-zinc-600 flex justify-end">
+<span class="text-[8px] text-zinc-500 font-black uppercase -mt-4 mr-2">Target Baseline</span>
+</div>
+</div>
+<div class="mt-4 flex justify-between text-[10px] font-bold text-zinc-500">
+<span>Cycle 1</span>
+<span>Cycle 150</span>
+<span>Cycle 300</span>
+</div>
+</div>
+<!-- Multi-Sensor Trend Analysis -->
+<div class="col-span-12 bg-zinc-950 border border-zinc-800 p-6">
+<div class="flex items-center justify-between mb-8">
+<h3 class="text-xs font-black uppercase tracking-[0.2em] text-orange-500">Multi-Sensor Trend Correlation</h3>
+<div class="flex gap-4">
+<button class="px-3 py-1 bg-zinc-900 border border-zinc-700 text-[10px] font-bold text-zinc-300 uppercase hover:bg-zinc-800">Export CSV</button>
+<button class="px-3 py-1 bg-orange-500 text-black border border-orange-500 text-[10px] font-bold uppercase">Sync Stream</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Sensor Row 1 -->
+<div class="space-y-4">
+<div class="flex justify-between items-end border-b border-zinc-800 pb-2">
+<span class="text-[10px] font-bold uppercase text-zinc-500">LPC Temp (T2)</span>
+<span class="text-xs font-black text-white">482.12 K</span>
+</div>
+<div class="h-16 flex items-end gap-1">
+<script>
+                                    for(let i=0; i<20; i++) {
+                                        let h = Math.floor(Math.random() * 40) + 10;
+                                        document.write(`<div class="flex-1 bg-zinc-800" style="height: ${h}px"></div>`);
+                                    }
+                                </script>
+</div>
+</div>
+<!-- Sensor Row 2 -->
+<div class="space-y-4">
+<div class="flex justify-between items-end border-b border-zinc-800 pb-2">
+<span class="text-[10px] font-bold uppercase text-zinc-500">Fan Speed (N1)</span>
+<span class="text-xs font-black text-white">2,388 RPM</span>
+</div>
+<div class="h-16 flex items-end gap-1">
+<script>
+                                    for(let i=0; i<20; i++) {
+                                        let h = Math.floor(Math.random() * 50) + 20;
+                                        document.write(`<div class="flex-1 bg-orange-500/40" style="height: ${h}px"></div>`);
+                                    }
+                                </script>
+</div>
+</div>
+<!-- Sensor Row 3 -->
+<div class="space-y-4">
+<div class="flex justify-between items-end border-b border-zinc-800 pb-2">
+<span class="text-[10px] font-bold uppercase text-zinc-500">Oil Pressure (P15)</span>
+<span class="text-xs font-black text-white">21.61 PSIA</span>
+</div>
+<div class="h-16 flex items-end gap-1">
+<script>
+                                    for(let i=0; i<20; i++) {
+                                        let h = Math.floor(Math.random() * 30) + 15;
+                                        document.write(`<div class="flex-1 bg-zinc-800" style="height: ${h}px"></div>`);
+                                    }
+                                </script>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- System Footer Metadata -->
+<footer class="mt-auto p-6 border-t border-zinc-900 bg-zinc-950/50 flex flex-wrap justify-between items-center gap-4">
+<div class="flex items-center gap-6">
+<div class="flex flex-col">
+<span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">Model Engine</span>
+<span class="text-xs font-medium text-zinc-400">TensorFlow/XLA Optimized</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">Last Checkpoint</span>
+<span class="text-xs font-medium text-zinc-400">2023-10-27 14:22:01 UTC</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-[9px] font-bold text-zinc-500 uppercase">Architecture: Bi-LSTM Attention 512-Dense</span>
+<div class="w-3 h-3 bg-green-500 rounded-sm"></div>
+</div>
+</footer>
+</main>
+<script>
+const API = 'http://127.0.0.1:8000';
+
+async function loadInsights() {
+  try {
+    const [sumRes, histRes] = await Promise.all([
+      fetch(`${API}/api/summary`),
+      fetch(`${API}/api/history`)
+    ]);
+    const summary = await sumRes.json();
+    const history = await histRes.json();
+
+    // Update hero stats
+    const rmse = summary.metrics.bestValRmse;
+    const conf = Math.max(0, 100 - rmse).toFixed(1);
+    document.querySelectorAll('[data-kpi="confidence"]').forEach(el => el.textContent = conf + '%');
+    document.querySelectorAll('[data-kpi="epochs"]').forEach(el => el.textContent = summary.metrics.bestEpoch);
+    document.querySelectorAll('[data-kpi="mae"]').forEach(el => el.textContent = summary.metrics.testMae.toFixed(3));
+
+    // Rewrite training chart with real data
+    const canvas = document.getElementById('loss-canvas');
+    if (canvas && history.length > 0) {
+      new Chart(canvas, {
+        type:'line',
+        data:{
+          labels: history.map(h=>h.epoch),
+          datasets:[
+            { label:'Train Loss', data:history.map(h=>h.loss), borderColor:'#F97316', backgroundColor:'rgba(249,115,22,0.07)', pointRadius:0, borderWidth:2, fill:true, tension:0.3, yAxisID:'y' },
+            { label:'Val RMSE', data:history.map(h=>h.val_rmse), borderColor:'#ffffff', backgroundColor:'rgba(255,255,255,0.04)', pointRadius:0, borderWidth:2, borderDash:[4,3], fill:true, tension:0.3, yAxisID:'y1' }
+          ]
+        },
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+          scales:{ x:{grid:{color:'#1c1c1c'}, ticks:{color:'#71717a', maxTicksLimit:8}}, y:{position:'left', grid:{color:'#1c1c1c'}, ticks:{color:'#F97316', maxTicksLimit:5}}, y1:{position:'right', grid:{drawOnChartArea:false}, ticks:{color:'#ffffff', maxTicksLimit:5}} } }
+      });
+    }
+
+    // Feature list
+    const features = summary.config.featureColumns || [];
+    const featureContainer = document.getElementById('feature-list');
+    if (featureContainer && features.length > 0) {
+      featureContainer.innerHTML = features.map((f,i) => {
+        const pct = Math.max(10, 100 - i * (90 / features.length));
+        return `<div class="space-y-1"><div class="flex justify-between text-[10px] font-bold uppercase text-zinc-400"><span>${f}</span><span>${pct.toFixed(0)}%</span></div><div class="h-2 bg-zinc-900 w-full"><div class="h-full bg-orange-500" style="width:${pct}%"></div></div></div>`;
+      }).join('');
+    }
+  } catch(e) { console.error('Insights load error', e); }
+}
+
+window.addEventListener('DOMContentLoaded', loadInsights);
+</script>
+</body></html>

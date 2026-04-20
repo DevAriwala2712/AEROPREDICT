@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Model Details | AeroPredict AI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "primary-container": "#c75300",
+                "on-surface": "#e2e2e2",
+                "surface-container-high": "#2a2a2a",
+                "outline-variant": "#584238",
+                "on-primary": "#562000",
+                "on-error-container": "#ffdad6",
+                "surface-container-low": "#1b1b1b",
+                "primary-fixed": "#ffdbcb",
+                "inverse-primary": "#a04100",
+                "surface-container-lowest": "#0e0e0e",
+                "tertiary-fixed-dim": "#c6c6c7",
+                "secondary-fixed": "#e2e2e2",
+                "error": "#ffb4ab",
+                "on-secondary-container": "#b5b5b5",
+                "surface-tint": "#ffb693",
+                "on-tertiary-fixed-variant": "#454748",
+                "on-tertiary-fixed": "#1a1c1d",
+                "tertiary": "#c6c6c7",
+                "background": "#131313",
+                "secondary-container": "#474747",
+                "inverse-on-surface": "#303030",
+                "on-secondary-fixed": "#1b1b1b",
+                "outline": "#a78b7f",
+                "tertiary-container": "#757778",
+                "primary-fixed-dim": "#ffb693",
+                "tertiary-fixed": "#e2e2e3",
+                "on-primary-fixed-variant": "#7a3000",
+                "error-container": "#93000a",
+                "on-tertiary-container": "#ffffff",
+                "on-secondary": "#303030",
+                "surface": "#131313",
+                "surface-dim": "#131313",
+                "surface-container-highest": "#353535",
+                "on-tertiary": "#2e3132",
+                "inverse-surface": "#e2e2e2",
+                "on-surface-variant": "#dfc0b3",
+                "surface-variant": "#353535",
+                "secondary-fixed-dim": "#c6c6c6",
+                "primary": "#ffb693",
+                "on-primary-fixed": "#351000",
+                "on-secondary-fixed-variant": "#474747",
+                "on-error": "#690005",
+                "on-primary-container": "#ffffff",
+                "surface-container": "#1f1f1f",
+                "surface-bright": "#393939",
+                "secondary": "#c6c6c6",
+                "on-background": "#e2e2e2"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.5rem",
+                "lg": "1rem",
+                "xl": "1.5rem",
+                "full": "9999px"
+            },
+            "fontFamily": {
+                "headline": ["Inter"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { background-color: #000000; color: #FFFFFF; font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .bg-industrial { background-color: #0D0D0D; }
+        .border-industrial { border-color: #262626; }
+        .text-orange-accent { color: #F97316; }
+        .bg-orange-accent { background-color: #F97316; }
+        .chart-grid { background-image: linear-gradient(#1c1c1c 1px, transparent 1px), linear-gradient(90deg, #1c1c1c 1px, transparent 1px); background-size: 40px 40px; }
+    </style>
+</head>
+<body class="flex min-h-screen bg-black">
+<!-- SideNavBar Shell -->
+<aside class="bg-zinc-950 text-sm font-medium font-inter fixed left-0 top-0 h-screen w-64 border-r border-zinc-800 flex flex-col py-4 z-40">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-8 h-8 bg-orange-500 rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-black" style="font-variation-settings: 'FILL' 1;">rocket_launch</span>
+</div>
+<div>
+<div class="text-orange-500 font-black">AERO-CORE</div>
+<div class="text-[10px] text-zinc-500 uppercase tracking-widest">V2.4.0-Active</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1 px-4">
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 transition-all text-sm font-medium uppercase tracking-wider" href="Main_Dashboard.html">
+<span class="material-symbols-outlined">dashboard</span> Dashboard
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 transition-all text-sm font-medium uppercase tracking-wider" href="Live_Prediction_Panel.html">
+<span class="material-symbols-outlined">query_stats</span> Live Prediction
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 transition-all text-sm font-medium uppercase tracking-wider" href="Model_Insights.html">
+<span class="material-symbols-outlined">insights</span> Model Insights
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-orange-500 bg-orange-500/5 border-r-2 border-orange-500 text-sm font-medium uppercase tracking-wider" href="Model_Details_Architecture.html">
+<span class="material-symbols-outlined">analytics</span> Model Details
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 transition-all text-sm font-medium uppercase tracking-wider" href="Data_Explorer.html">
+<span class="material-symbols-outlined">database</span> Data Explorer
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 transition-all text-sm font-medium uppercase tracking-wider" href="API_Deployment_Demo.html">
+<span class="material-symbols-outlined">api</span> API Demo
+</a>
+</nav>
+</aside>
+<div class="flex-1 flex flex-col min-w-0 md:ml-64">
+<!-- TopNavBar Shell -->
+<header class="bg-black text-orange-500 font-inter tracking-tight docked full-width top-0 border-b border-zinc-800 flex justify-between items-center px-6 h-16 w-full">
+<div class="text-xl font-bold uppercase tracking-widest text-white">AeroPredict AI</div>
+<div class="flex items-center gap-6">
+<div class="relative group">
+<span class="material-symbols-outlined text-zinc-400 group-hover:text-white transition-colors duration-200 cursor-pointer" data-icon="notifications">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-orange-500 rounded-full border border-black"></span>
+</div>
+<span class="material-symbols-outlined text-zinc-400 hover:text-white transition-colors duration-200 cursor-pointer" data-icon="settings">settings</span>
+<div class="flex items-center gap-3 ml-2 pl-6 border-l border-zinc-800">
+<div class="text-right">
+<div class="text-xs font-bold text-white leading-none">COMMANDER_01</div>
+<div class="text-[10px] text-zinc-500">Root Access</div>
+</div>
+<img alt="User profile" class="w-8 h-8 rounded-full border border-zinc-700" data-alt="portrait of a professional aerospace engineer in low key studio lighting with high contrast" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBenx4BDAXow7BIJsxFE6KmuQc8vant4gpi80sPu-J5wRwkZ_2Mk3e3f9Cx47PzNI6Hq5RJu8ip5SNfeAnG4JVxKN8DeR4XwoVJdb5w14Y14Fs_QopeZS5pZlmulvnwj4Cyqy5mMUrmBx9Z0R0QVlKdNUkvrnrNiZplHwV3p1OZGM6e2LnmwUMwrSdVCaNetgn4WDMiI7M8Coszs29MjytPUzMJVgoOlxdXLET6p1mqC9PUGSBaYrF5rJrVViuCPzRanLaPc-VXn7M"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 overflow-y-auto p-8 space-y-8 bg-black">
+<!-- Page Header -->
+<div class="flex justify-between items-end">
+<div>
+<h1 class="text-3xl font-black text-white tracking-tighter uppercase">Model Details <span class="text-orange-500 text-sm ml-2 px-2 py-1 bg-zinc-900 border border-zinc-800 rounded">v2.4.0-STABLE</span></h1>
+<p class="text-zinc-500 mt-1 max-w-2xl">Deep learning architecture for Remaining Useful Life (RUL) estimation on high-bypass turbofan engines using temporal sequence modeling.</p>
+</div>
+<div class="flex gap-4">
+<button class="px-4 py-2 bg-zinc-900 border border-zinc-800 text-white text-xs font-bold uppercase tracking-wider hover:bg-zinc-800 transition-colors">Export Config</button>
+<button class="px-4 py-2 bg-orange-500 text-black text-xs font-black uppercase tracking-wider hover:bg-orange-600 transition-colors">Deploy Model</button>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-6">
+<!-- Architecture Diagram (Bento Large) -->
+<div class="col-span-12 lg:col-span-8 bg-industrial border border-industrial rounded-lg p-8 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-10">
+<span class="material-symbols-outlined text-9xl" data-icon="account_tree">account_tree</span>
+</div>
+<h3 class="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-10 flex items-center gap-2">
+<span class="w-1.5 h-1.5 bg-orange-500"></span> Architecture Diagram
+                    </h3>
+<div class="flex items-center justify-between gap-4 max-w-full overflow-x-auto pb-4">
+<!-- Input -->
+<div class="flex-shrink-0 flex flex-col items-center">
+<div class="w-32 h-20 bg-zinc-900 border-2 border-zinc-800 rounded flex flex-col items-center justify-center text-center p-2">
+<span class="text-[10px] text-zinc-500 font-bold uppercase mb-1">Input</span>
+<span class="text-xs text-white font-mono uppercase">Sensor Data</span>
+<span class="text-[9px] text-orange-500 mt-1">[50, 21]</span>
+</div>
+</div>
+<div class="flex-1 h-px bg-zinc-800 relative min-w-[30px]">
+<span class="absolute right-0 -top-[5px] border-y-[5px] border-y-transparent border-l-[8px] border-l-zinc-800"></span>
+</div>
+<!-- LSTM 1 -->
+<div class="flex-shrink-0 flex flex-col items-center">
+<div class="w-32 h-20 bg-zinc-950 border-2 border-orange-500/30 rounded flex flex-col items-center justify-center text-center p-2">
+<span class="text-[10px] text-zinc-500 font-bold uppercase mb-1">Layer 01</span>
+<span class="text-xs text-white font-mono uppercase">LSTM</span>
+<span class="text-[9px] text-orange-500 mt-1">128 Units</span>
+</div>
+</div>
+<div class="flex-1 h-px bg-zinc-800 relative min-w-[30px]">
+<span class="absolute right-0 -top-[5px] border-y-[5px] border-y-transparent border-l-[8px] border-l-zinc-800"></span>
+</div>
+<!-- LSTM 2 -->
+<div class="flex-shrink-0 flex flex-col items-center">
+<div class="w-32 h-20 bg-zinc-950 border-2 border-orange-500/30 rounded flex flex-col items-center justify-center text-center p-2">
+<span class="text-[10px] text-zinc-500 font-bold uppercase mb-1">Layer 02</span>
+<span class="text-xs text-white font-mono uppercase">LSTM</span>
+<span class="text-[9px] text-orange-500 mt-1">64 Units</span>
+</div>
+</div>
+<div class="flex-1 h-px bg-zinc-800 relative min-w-[30px]">
+<span class="absolute right-0 -top-[5px] border-y-[5px] border-y-transparent border-l-[8px] border-l-zinc-800"></span>
+</div>
+<!-- Dense -->
+<div class="flex-shrink-0 flex flex-col items-center">
+<div class="w-32 h-20 bg-zinc-900 border-2 border-zinc-800 rounded flex flex-col items-center justify-center text-center p-2">
+<span class="text-[10px] text-zinc-500 font-bold uppercase mb-1">Output Layer</span>
+<span class="text-xs text-white font-mono uppercase">Dense</span>
+<span class="text-[9px] text-orange-500 mt-1">Softmax</span>
+</div>
+</div>
+<div class="flex-1 h-px bg-zinc-800 relative min-w-[30px]">
+<span class="absolute right-0 -top-[5px] border-y-[5px] border-y-transparent border-l-[8px] border-l-zinc-800"></span>
+</div>
+<!-- Output -->
+<div class="flex-shrink-0 flex flex-col items-center">
+<div class="w-32 h-20 bg-orange-500/10 border-2 border-orange-500 rounded flex flex-col items-center justify-center text-center p-2">
+<span class="text-[10px] text-orange-500 font-bold uppercase mb-1">Result</span>
+<span class="text-xs text-white font-mono uppercase">RUL Prediction</span>
+<span class="text-[9px] text-orange-500 mt-1">Scalar [0, 1]</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Dataset Specs (Bento Side) -->
+<div class="col-span-12 lg:col-span-4 bg-industrial border border-industrial rounded-lg p-6 flex flex-col justify-between">
+<div>
+<h3 class="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+<span class="w-1.5 h-1.5 bg-zinc-500"></span> Dataset Specifications
+                        </h3>
+<div class="space-y-5">
+<div class="flex justify-between items-center border-b border-zinc-900 pb-3">
+<span class="text-sm text-zinc-400">Dataset</span>
+<span class="text-sm font-mono text-white">NASA CMAPSS FD001</span>
+</div>
+<div class="flex justify-between items-center border-b border-zinc-900 pb-3">
+<span class="text-sm text-zinc-400">Sensors</span>
+<span class="text-sm font-mono text-white">21 Dimensional</span>
+</div>
+<div class="flex justify-between items-center border-b border-zinc-900 pb-3">
+<span class="text-sm text-zinc-400">Sequence Length</span>
+<span class="text-sm font-mono text-white">50 cycles</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-sm text-zinc-400">Training Epochs</span>
+<span class="text-sm font-mono text-white">200 Epochs</span>
+</div>
+</div>
+</div>
+<div class="mt-8 p-4 bg-zinc-950 border border-zinc-900 rounded">
+<div class="text-[10px] text-zinc-500 uppercase mb-2">Training Performance</div>
+<div class="flex items-end gap-1 h-8">
+<div class="w-full bg-orange-500 h-[60%] opacity-20"></div>
+<div class="w-full bg-orange-500 h-[75%] opacity-40"></div>
+<div class="w-full bg-orange-500 h-[50%] opacity-60"></div>
+<div class="w-full bg-orange-500 h-[90%] opacity-80"></div>
+<div class="w-full bg-orange-500 h-[100%]"></div>
+</div>
+</div>
+</div>
+<!-- Uncertainty Estimation (Bento Bottom Left) -->
+<div class="col-span-12 lg:col-span-7 bg-industrial border border-industrial rounded-lg p-6 overflow-hidden">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+<span class="w-1.5 h-1.5 bg-orange-500"></span> Uncertainty Estimation
+                        </h3>
+<div class="flex gap-4 text-[10px] uppercase font-bold tracking-wider">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-orange-500"></span>
+<span class="text-zinc-400">Predicted RUL</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-orange-500/20"></span>
+<span class="text-zinc-400">Confidence Band (95%)</span>
+</div>
+</div>
+</div>
+<div class="h-64 chart-grid border-l border-b border-zinc-800 relative">
+<!-- Confidence Band -->
+<svg class="absolute inset-0 w-full h-full overflow-visible" preserveaspectratio="none">
+<path d="M0,40 Q150,50 300,100 Q450,150 600,240 L600,200 Q450,120 300,80 Q150,40 0,30 Z" fill="#F97316" fill-opacity="0.1"></path>
+<!-- Main RUL Line -->
+<path d="M0,35 Q150,45 300,90 Q450,135 600,220" fill="none" stroke="#F97316" stroke-dasharray="0" stroke-width="2"></path>
+<!-- Uncertainty Spikes -->
+<line stroke="#F97316" stroke-width="1" x1="150" x2="150" y1="40" y2="50"></line>
+<line stroke="#F97316" stroke-width="1" x1="300" x2="300" y1="80" y2="100"></line>
+<line stroke="#F97316" stroke-width="1" x1="450" x2="450" y1="120" y2="150"></line>
+</svg>
+<!-- Axis Labels -->
+<div class="absolute bottom-2 right-2 text-[9px] text-zinc-600 uppercase font-bold">Time (Cycles)</div>
+<div class="absolute top-2 left-2 text-[9px] text-zinc-600 uppercase font-bold rotate-90 origin-top-left translate-x-1">RUL Index</div>
+</div>
+</div>
+<!-- Domain Adaptation (Bento Bottom Right) -->
+<div class="col-span-12 lg:col-span-5 bg-industrial border border-industrial rounded-lg p-6 flex flex-col">
+<h3 class="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+<span class="w-1.5 h-1.5 bg-orange-500"></span> Cross-Engine Domain Adaptation
+                    </h3>
+<div class="space-y-4 flex-1">
+<!-- Profile 1 -->
+<div class="p-4 bg-zinc-950 border border-zinc-800 rounded-lg flex items-center justify-between">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 bg-zinc-900 border border-zinc-800 rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-zinc-400" data-icon="propulsion_unit">ac_unit</span>
+</div>
+<div>
+<div class="text-sm font-bold text-white">GE-9X Profile</div>
+<div class="text-[10px] text-zinc-500 uppercase font-mono">ID: PROP-2940-GE</div>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="text-[9px] text-orange-500 font-bold uppercase mb-1 tracking-widest">Active</span>
+<div class="w-10 h-5 bg-orange-500/20 border border-orange-500/50 rounded-full relative p-0.5">
+<div class="absolute right-0.5 top-0.5 w-3.5 h-3.5 bg-orange-500 rounded-full shadow-lg"></div>
+</div>
+</div>
+</div>
+<!-- Profile 2 -->
+<div class="p-4 bg-zinc-950 border border-zinc-800 rounded-lg flex items-center justify-between">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 bg-zinc-900 border border-zinc-800 rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-zinc-400" data-icon="engineering">engineering</span>
+</div>
+<div>
+<div class="text-sm font-bold text-white">Trent XWB Profile</div>
+<div class="text-[10px] text-zinc-500 uppercase font-mono">ID: PROP-8812-RR</div>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="text-[9px] text-orange-500 font-bold uppercase mb-1 tracking-widest">Active</span>
+<div class="w-10 h-5 bg-orange-500/20 border border-orange-500/50 rounded-full relative p-0.5">
+<div class="absolute right-0.5 top-0.5 w-3.5 h-3.5 bg-orange-500 rounded-full shadow-lg"></div>
+</div>
+</div>
+</div>
+<!-- Profile 3 (Inactive) -->
+<div class="p-4 bg-black/40 border border-zinc-900 rounded-lg flex items-center justify-between grayscale opacity-50">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 bg-zinc-900 border border-zinc-800 rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-zinc-600" data-icon="blur_on">blur_on</span>
+</div>
+<div>
+<div class="text-sm font-bold text-zinc-600">GEnx-1B Profile</div>
+<div class="text-[10px] text-zinc-700 uppercase font-mono">ID: PROP-1011-GE</div>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="text-[9px] text-zinc-700 font-bold uppercase mb-1 tracking-widest">Standby</span>
+<div class="w-10 h-5 bg-zinc-900 border border-zinc-800 rounded-full relative p-0.5">
+<div class="absolute left-0.5 top-0.5 w-3.5 h-3.5 bg-zinc-700 rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Technical Logs Footer -->
+<div class="bg-industrial border border-industrial rounded-lg p-4 font-mono text-[10px] text-zinc-500 flex justify-between">
+<div class="flex gap-6">
+<span class="text-orange-500/80">LATENCY: 12ms</span>
+<span>THROUGHPUT: 450 req/s</span>
+<span>HARDWARE: NVIDIA A100-SXM4-80GB</span>
+</div>
+<div class="flex gap-2">
+<span class="animate-pulse w-2 h-2 rounded-full bg-green-500 inline-block mt-0.5"></span>
+<span>CORE STATUS: SYNCHRONIZED</span>
+</div>
+</div>
+</main>
+</div>
+</body></html>

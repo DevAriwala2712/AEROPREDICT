@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+
+# Data and Models
+data/
+!models/
+models/*.pth
+models/*.pkl
+models/*.png
+models/*.json
+
+# Exclude large data specifically but allow the models folder
+# Actually, I'll allow everything in models except maybe large backups
+# and exclude the data directory since there is a download script.
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Misc
+tempCodeRunnerFile.cpp

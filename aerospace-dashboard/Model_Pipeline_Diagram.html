@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Model Pipeline | AeroPredict AI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-fixed": "#e2e2e3",
+                    "inverse-surface": "#e2e2e2",
+                    "surface-tint": "#ffb693",
+                    "error-container": "#93000a",
+                    "surface-container-low": "#1b1b1b",
+                    "primary-fixed-dim": "#ffb693",
+                    "on-secondary": "#303030",
+                    "error": "#ffb4ab",
+                    "on-error-container": "#ffdad6",
+                    "tertiary": "#c6c6c7",
+                    "secondary-container": "#474747",
+                    "on-tertiary-container": "#ffffff",
+                    "surface-container": "#1f1f1f",
+                    "secondary-fixed": "#e2e2e2",
+                    "primary-container": "#c75300",
+                    "on-secondary-fixed": "#1b1b1b",
+                    "on-secondary-container": "#b5b5b5",
+                    "on-tertiary-fixed-variant": "#454748",
+                    "on-secondary-fixed-variant": "#474747",
+                    "on-primary": "#562000",
+                    "on-primary-fixed-variant": "#7a3000",
+                    "surface-bright": "#393939",
+                    "surface-container-lowest": "#0e0e0e",
+                    "inverse-on-surface": "#303030",
+                    "background": "#131313",
+                    "primary-fixed": "#ffdbcb",
+                    "on-error": "#690005",
+                    "on-primary-container": "#ffffff",
+                    "inverse-primary": "#a04100",
+                    "on-tertiary-fixed": "#1a1c1d",
+                    "outline": "#a78b7f",
+                    "secondary-fixed-dim": "#c6c6c6",
+                    "surface-dim": "#131313",
+                    "on-tertiary": "#2e3132",
+                    "secondary": "#c6c6c6",
+                    "on-background": "#e2e2e2",
+                    "on-surface-variant": "#dfc0b3",
+                    "tertiary-container": "#757778",
+                    "surface-container-high": "#2a2a2a",
+                    "on-surface": "#e2e2e2",
+                    "surface-variant": "#353535",
+                    "surface": "#131313",
+                    "outline-variant": "#584238",
+                    "primary": "#ffb693",
+                    "surface-container-highest": "#353535",
+                    "tertiary-fixed-dim": "#c6c6c7",
+                    "on-primary-fixed": "#351000"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.5rem",
+                    "lg": "1rem",
+                    "xl": "1.5rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #000000;
+            color: #FFFFFF;
+            font-family: 'Inter', sans-serif;
+        }
+        .pipeline-connector {
+            position: relative;
+        }
+        .pipeline-connector::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: -2rem;
+            width: 2rem;
+            height: 1px;
+            background: #2F2F2F;
+            z-index: 0;
+        }
+        .pipeline-scroll::-webkit-scrollbar {
+            height: 6px;
+        }
+        .pipeline-scroll::-webkit-scrollbar-track {
+            background: #0D0D0D;
+        }
+        .pipeline-scroll::-webkit-scrollbar-thumb {
+            background: #262626;
+            border-radius: 3px;
+        }
+        .pipeline-scroll::-webkit-scrollbar-thumb:hover {
+            background: #c75300;
+        }
+    </style>
+</head>
+<body class="overflow-hidden">
+<!-- TopNavBar -->
+<nav class="bg-black text-orange-500 font-inter tracking-tight docked full-width top-0 border-b border-zinc-800 flex justify-between items-center px-6 h-16 w-full fixed z-50">
+<div class="flex items-center gap-4">
+<span class="text-xl font-bold uppercase text-white">AeroPredict AI</span>
+<div class="h-6 w-px bg-zinc-800"></div>
+<span class="text-zinc-400 text-sm font-medium">Predictive Maintenance Model Pipeline</span>
+</div>
+<div class="flex items-center gap-6">
+<button class="bg-primary-container text-white px-4 py-2 rounded-md font-bold text-sm hover:opacity-90 active:scale-95 duration-150 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="play_arrow">play_arrow</span>
+                Run Pipeline Simulation
+            </button>
+<div class="flex items-center gap-4 text-zinc-400">
+<button class="hover:bg-zinc-900 hover:text-white transition-colors p-2 rounded-full active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+</button>
+<button class="hover:bg-zinc-900 hover:text-white transition-colors p-2 rounded-full active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<button class="hover:bg-zinc-900 hover:text-white transition-colors p-2 rounded-full active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+</div>
+</div>
+</nav>
+<!-- SideNavBar -->
+<aside class="bg-zinc-950 text-inter text-sm font-medium docked left-0 h-full border-r w-64 border-zinc-800 flex flex-col fixed left-0 top-0 pt-16 z-40">
+<div class="p-6">
+<div class="flex items-center gap-3 mb-1">
+<div class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></div>
+<span class="text-orange-500 font-black tracking-widest uppercase text-xs">Engine Unit-742</span>
+</div>
+<p class="text-zinc-500 text-[10px] uppercase tracking-tighter">Telemetry: Active</p>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 transition-all rounded" href="Main_Dashboard.html">
+<span class="material-symbols-outlined text-lg">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 transition-all rounded" href="Live_Prediction_Panel.html">
+<span class="material-symbols-outlined text-lg">query_stats</span>
+                Live Prediction
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 transition-all rounded" href="Model_Insights.html">
+<span class="material-symbols-outlined text-lg">insights</span>
+                Model Insights
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 transition-all rounded" href="Model_Details_Architecture.html">
+<span class="material-symbols-outlined text-lg">analytics</span>
+                Model Details
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 transition-all rounded" href="Data_Explorer.html">
+<span class="material-symbols-outlined text-lg">database</span>
+                Data Explorer
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 transition-all rounded" href="API_Deployment_Demo.html">
+<span class="material-symbols-outlined text-lg">api</span>
+                API Demo
+            </a>
+</nav>
+<div class="p-3 border-t border-zinc-800 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 transition-all rounded active:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="description">description</span>
+                Documentation
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 transition-all rounded active:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="terminal">terminal</span>
+                System Status
+            </a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="ml-64 pt-16 h-screen bg-black overflow-hidden flex flex-col">
+<!-- Pipeline Visualization Area -->
+<div class="flex-1 p-8 overflow-x-auto pipeline-scroll flex items-center min-h-[600px]">
+<div class="flex items-start gap-16 px-4">
+<!-- Step 1 -->
+<div class="flex-shrink-0 w-72 pipeline-connector">
+<div class="bg-surface-container border border-zinc-800 p-5 rounded-lg hover:border-orange-500/50 transition-colors relative group">
+<div class="flex justify-between items-start mb-4">
+<div class="bg-zinc-900 p-2 rounded text-orange-500">
+<span class="material-symbols-outlined" data-icon="settings_input_component">settings_input_component</span>
+</div>
+<span class="text-[10px] bg-green-500/10 text-green-500 px-2 py-1 rounded-full font-bold uppercase tracking-wider">Validated</span>
+</div>
+<h3 class="text-white font-bold mb-3 text-sm">1. Data Input</h3>
+<ul class="text-zinc-500 text-xs space-y-2 mb-4">
+<li class="flex items-start gap-2">• <span>Multi-sensor time-series</span></li>
+<li class="flex items-start gap-2">• <span>Turbofan engine telemetry</span></li>
+<li class="flex items-start gap-2">• <span>High-freq sampling (1Hz)</span></li>
+</ul>
+<div class="pt-4 border-t border-zinc-800 flex justify-between items-center text-[10px] text-zinc-600">
+<span>Last Sync: 2m ago</span>
+<span class="material-symbols-outlined text-sm cursor-help" data-icon="info">info</span>
+</div>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="flex-shrink-0 w-72 pipeline-connector">
+<div class="bg-surface-container border border-zinc-800 p-5 rounded-lg hover:border-orange-500/50 transition-colors relative group">
+<div class="flex justify-between items-start mb-4">
+<div class="bg-zinc-900 p-2 rounded text-orange-500">
+<span class="material-symbols-outlined" data-icon="filter_alt">filter_alt</span>
+</div>
+<span class="text-[10px] bg-green-500/10 text-green-500 px-2 py-1 rounded-full font-bold uppercase tracking-wider">Active</span>
+</div>
+<h3 class="text-white font-bold mb-3 text-sm">2. Preprocessing</h3>
+<ul class="text-zinc-500 text-xs space-y-2 mb-4">
+<li class="flex items-start gap-2">• <span>Missing value handling</span></li>
+<li class="flex items-start gap-2">• <span>Noise filtering (Savitzky-Golay)</span></li>
+<li class="flex items-start gap-2">• <span>Min-Max scaling &amp; RUL labeling</span></li>
+</ul>
+<div class="w-full bg-zinc-900 h-1 rounded-full overflow-hidden mb-2">
+<div class="bg-orange-500 h-full w-full"></div>
+</div>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="flex-shrink-0 w-72 pipeline-connector">
+<div class="bg-surface-container border border-zinc-800 p-5 rounded-lg hover:border-orange-500/50 transition-colors relative group">
+<div class="flex justify-between items-start mb-4">
+<div class="bg-zinc-900 p-2 rounded text-orange-500">
+<span class="material-symbols-outlined" data-icon="layers">layers</span>
+</div>
+<span class="text-[10px] bg-green-500/10 text-green-500 px-2 py-1 rounded-full font-bold uppercase tracking-wider">Active</span>
+</div>
+<h3 class="text-white font-bold mb-3 text-sm">3. Sequence Generation</h3>
+<ul class="text-zinc-500 text-xs space-y-2 mb-4">
+<li class="flex items-start gap-2">• <span>Sliding window creation</span></li>
+<li class="flex items-start gap-2">• <span>Window size: 50 cycles</span></li>
+<li class="flex items-start gap-2">• <span>Overlap: 10% step</span></li>
+</ul>
+</div>
+</div>
+<!-- Step 4 -->
+<div class="flex-shrink-0 w-72 pipeline-connector">
+<div class="bg-surface-container border border-orange-500/30 p-5 rounded-lg hover:border-orange-500 transition-colors relative group bg-gradient-to-br from-zinc-900/50 to-transparent">
+<div class="flex justify-between items-start mb-4">
+<div class="bg-orange-500/10 p-2 rounded text-orange-500">
+<span class="material-symbols-outlined" data-icon="memory">memory</span>
+</div>
+<span class="text-[10px] bg-orange-500 text-white px-2 py-1 rounded-full font-bold uppercase tracking-wider animate-pulse">Processing</span>
+</div>
+<h3 class="text-white font-bold mb-3 text-sm">4. Model (LSTM/RNN)</h3>
+<ul class="text-zinc-300 text-xs space-y-2 mb-4">
+<li class="flex items-start gap-2">• <span>Temporal degradation learning</span></li>
+<li class="flex items-start gap-2">• <span>Bidirectional LSTM layers</span></li>
+<li class="flex items-start gap-2">• <span>Attention mechanisms</span></li>
+</ul>
+<div class="space-y-1">
+<div class="flex justify-between text-[10px] text-zinc-500">
+<span>Training Progress</span>
+<span>68%</span>
+</div>
+<div class="w-full bg-zinc-900 h-1.5 rounded-full overflow-hidden">
+<div class="bg-orange-500 h-full w-[68%]"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Step 5 -->
+<div class="flex-shrink-0 w-72 pipeline-connector">
+<div class="bg-surface-container border border-zinc-800 p-5 rounded-lg hover:border-orange-500/50 transition-colors relative group">
+<div class="flex justify-between items-start mb-4">
+<div class="bg-zinc-900 p-2 rounded text-orange-500">
+<span class="material-symbols-outlined" data-icon="query_stats">query_stats</span>
+</div>
+<span class="text-[10px] bg-zinc-800 text-zinc-500 px-2 py-1 rounded-full font-bold uppercase tracking-wider">Pending</span>
+</div>
+<h3 class="text-white font-bold mb-3 text-sm">5. Evaluation</h3>
+<ul class="text-zinc-500 text-xs space-y-2 mb-4">
+<li class="flex items-start gap-2">• <span>RMSE/MAE metric suite</span></li>
+<li class="flex items-start gap-2">• <span>Prediction vs Actual comparison</span></li>
+<li class="flex items-start gap-2">• <span>Outlier detection</span></li>
+</ul>
+</div>
+</div>
+<!-- Step 6 -->
+<div class="flex-shrink-0 w-72 pipeline-connector">
+<div class="bg-surface-container border border-zinc-800 p-5 rounded-lg hover:border-orange-500/50 transition-colors relative group">
+<div class="flex justify-between items-start mb-4">
+<div class="bg-zinc-900 p-2 rounded text-orange-500">
+<span class="material-symbols-outlined" data-icon="event_repeat">event_repeat</span>
+</div>
+</div>
+<h3 class="text-white font-bold mb-3 text-sm">6. Prediction</h3>
+<ul class="text-zinc-500 text-xs space-y-2 mb-4">
+<li class="flex items-start gap-2">• <span>Remaining Useful Life (RUL)</span></li>
+<li class="flex items-start gap-2">• <span>Cycles until maintenance</span></li>
+</ul>
+</div>
+</div>
+<!-- Step 7 -->
+<div class="flex-shrink-0 w-72 pipeline-connector">
+<div class="bg-surface-container border border-zinc-800 p-5 rounded-lg hover:border-orange-500/50 transition-colors relative group">
+<div class="flex justify-between items-start mb-4">
+<div class="bg-zinc-900 p-2 rounded text-orange-500">
+<span class="material-symbols-outlined" data-icon="vitals">vitals</span>
+</div>
+</div>
+<h3 class="text-white font-bold mb-3 text-sm">7. Uncertainty Estimation</h3>
+<ul class="text-zinc-500 text-xs space-y-2 mb-4">
+<li class="flex items-start gap-2">• <span>Confidence intervals (95%)</span></li>
+<li class="flex items-start gap-2">• <span>Monte Carlo dropout</span></li>
+</ul>
+</div>
+</div>
+<!-- Step 8 -->
+<div class="flex-shrink-0 w-72 pipeline-connector">
+<div class="bg-surface-container border border-zinc-800 p-5 rounded-lg hover:border-orange-500/50 transition-colors relative group">
+<div class="flex justify-between items-start mb-4">
+<div class="bg-zinc-900 p-2 rounded text-orange-500">
+<span class="material-symbols-outlined" data-icon="compare_arrows">compare_arrows</span>
+</div>
+</div>
+<h3 class="text-white font-bold mb-3 text-sm">8. Domain Adaptation</h3>
+<ul class="text-zinc-500 text-xs space-y-2 mb-4">
+<li class="flex items-start gap-2">• <span>Transfer learning (Unit-700+)</span></li>
+<li class="flex items-start gap-2">• <span>Fleet-wide optimization</span></li>
+</ul>
+</div>
+</div>
+<!-- Step 9 -->
+<div class="flex-shrink-0 w-72 pipeline-connector">
+<div class="bg-surface-container border border-zinc-800 p-5 rounded-lg hover:border-orange-500/50 transition-colors relative group">
+<div class="flex justify-between items-start mb-4">
+<div class="bg-zinc-900 p-2 rounded text-orange-500">
+<span class="material-symbols-outlined" data-icon="monitoring">monitoring</span>
+</div>
+</div>
+<h3 class="text-white font-bold mb-3 text-sm">9. Visualization</h3>
+<div class="h-16 w-full bg-black/50 rounded mb-3 overflow-hidden">
+<img class="w-full h-full object-cover opacity-60" data-alt="technical line chart showing engine degradation curves with orange highlight lines on a dark black background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2k2BgeM4NS7LaA2ypBSBRWpgEsquTeDEEVxqpEQazMnAbhPPmTHMZLe5ay0QHqbD8RLYhNdHlJkuw2sYvlNysCgrKzkupYVN-EBirdc5OgzG4G1PcPJKmTR1wdqMzIk7lmCTSL62YcymLc5USSSRpyWip44Cgq_pdAZe61Ec83grpVwEYSvKVQwqSnT2bi_T4r5buTm1iKSN_7psplDRWE5Um66b4zkJxSM1VH-PlmWuqMaOaAX9v6qGbWWAJBqCaBoQzx9lQyig"/>
+</div>
+<ul class="text-zinc-500 text-xs space-y-1">
+<li class="flex items-start gap-2">• <span>Degradation curves</span></li>
+<li class="flex items-start gap-2">• <span>Sensor trends</span></li>
+</ul>
+</div>
+</div>
+<!-- Step 10 -->
+<div class="flex-shrink-0 w-80">
+<div class="bg-orange-500/5 border border-orange-500/20 p-6 rounded-lg relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-2">
+<span class="material-symbols-outlined text-orange-500/20 text-6xl" data-icon="task_alt" style="font-variation-settings: 'FILL' 1;">task_alt</span>
+</div>
+<div class="relative z-10">
+<div class="flex justify-between items-start mb-6">
+<div class="bg-orange-500 p-2 rounded text-white shadow-[0_0_15px_rgba(199,83,0,0.4)]">
+<span class="material-symbols-outlined" data-icon="output">output</span>
+</div>
+<span class="text-[10px] bg-orange-500/20 text-orange-400 px-3 py-1 rounded-full font-black uppercase tracking-widest">Final Phase</span>
+</div>
+<h3 class="text-white font-extrabold mb-4 text-base">10. Pipeline Output</h3>
+<div class="space-y-4">
+<div class="p-3 bg-black/40 rounded-md border border-zinc-800">
+<span class="text-zinc-400 text-[10px] uppercase font-bold tracking-tighter">Maintenance Recommendation</span>
+<p class="text-orange-500 font-bold text-sm">Schedule Service: 42 Cycles</p>
+</div>
+<div class="p-3 bg-black/40 rounded-md border border-zinc-800">
+<span class="text-zinc-400 text-[10px] uppercase font-bold tracking-tighter">Failure Risk Level</span>
+<div class="flex items-center gap-2 mt-1">
+<div class="flex-1 bg-zinc-800 h-2 rounded-full overflow-hidden">
+<div class="bg-orange-500 h-full w-[25%]"></div>
+</div>
+<span class="text-white font-bold text-xs">LOW</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- System Logs / Footer Interaction -->
+<div class="bg-surface-container border-t border-zinc-800 p-4 h-48 flex gap-6">
+<div class="w-1/3 flex flex-col">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-zinc-500 text-sm" data-icon="terminal">terminal</span>
+<span class="text-xs font-bold text-zinc-400 uppercase tracking-widest">System Logs</span>
+</div>
+<div class="flex-1 overflow-y-auto text-[10px] font-mono text-zinc-500 space-y-1">
+<p><span class="text-zinc-700">[14:22:01]</span> INITIALIZING_SENSOR_ARRAY_FETCH...</p>
+<p><span class="text-zinc-700">[14:22:03]</span> DATA_INGESTION_COMPLETED (2.4 GB)</p>
+<p><span class="text-zinc-700">[14:22:05]</span> RUNNING_NOISE_REDUCTION_FILTER...</p>
+<p class="text-orange-500/70"><span class="text-zinc-700">[14:22:12]</span> MODEL_TRAINING_STEP_1402: LOSS=0.0024</p>
+<p><span class="text-zinc-700">[14:22:15]</span> SEQUENCE_GENERATION_BUFFER_CLEARED</p>
+</div>
+</div>
+<div class="w-2/3 grid grid-cols-3 gap-4">
+<div class="bg-black p-4 rounded border border-zinc-900 flex flex-col justify-between">
+<span class="text-[10px] text-zinc-600 font-bold uppercase">CPU Usage</span>
+<div class="flex items-end justify-between">
+<span class="text-xl font-bold text-white">42%</span>
+<div class="flex gap-1 h-8 items-end">
+<div class="w-1 h-3 bg-zinc-800"></div>
+<div class="w-1 h-5 bg-zinc-800"></div>
+<div class="w-1 h-8 bg-orange-500"></div>
+<div class="w-1 h-4 bg-zinc-800"></div>
+</div>
+</div>
+</div>
+<div class="bg-black p-4 rounded border border-zinc-900 flex flex-col justify-between">
+<span class="text-[10px] text-zinc-600 font-bold uppercase">Memory (VRAM)</span>
+<div class="flex items-end justify-between">
+<span class="text-xl font-bold text-white">8.4<small class="text-xs font-normal">GB</small></span>
+<span class="text-[10px] text-green-500">STABLE</span>
+</div>
+</div>
+<div class="bg-black p-4 rounded border border-zinc-900 flex flex-col justify-between">
+<span class="text-[10px] text-zinc-600 font-bold uppercase">Pipeline Latency</span>
+<div class="flex items-end justify-between">
+<span class="text-xl font-bold text-white">124<small class="text-xs font-normal">ms</small></span>
+<span class="material-symbols-outlined text-zinc-700" data-icon="bolt">bolt</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Contextual Details Popover (Floating Action Indicator) -->
+<div class="fixed bottom-8 right-8 flex flex-col items-end gap-3 pointer-events-none">
+<div class="bg-zinc-900 border border-zinc-800 p-3 rounded-lg shadow-2xl animate-bounce pointer-events-auto">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-orange-500/20 flex items-center justify-center text-orange-500">
+<span class="material-symbols-outlined text-sm" data-icon="auto_awesome">auto_awesome</span>
+</div>
+<div>
+<p class="text-white text-[10px] font-bold">Optimization Available</p>
+<p class="text-zinc-500 text-[9px]">Apply pruning to Model Pipeline?</p>
+</div>
+</div>
+</div>
+</div>
+</body></html>

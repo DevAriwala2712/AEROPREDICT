@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AeroPredict AI - API Demo</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000000;
+            color: #FFFFFF;
+        }
+        .code-font {
+            font-family: 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-container": "#c75300",
+                        "on-surface": "#e2e2e2",
+                        "surface-container-high": "#2a2a2a",
+                        "outline-variant": "#584238",
+                        "on-primary": "#562000",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-low": "#1b1b1b",
+                        "primary-fixed": "#ffdbcb",
+                        "inverse-primary": "#a04100",
+                        "surface-container-lowest": "#0e0e0e",
+                        "tertiary-fixed-dim": "#c6c6c7",
+                        "secondary-fixed": "#e2e2e2",
+                        "error": "#ffb4ab",
+                        "on-secondary-container": "#b5b5b5",
+                        "surface-tint": "#ffb693",
+                        "on-tertiary-fixed-variant": "#454748",
+                        "on-tertiary-fixed": "#1a1c1d",
+                        "tertiary": "#c6c6c7",
+                        "background": "#131313",
+                        "secondary-container": "#474747",
+                        "inverse-on-surface": "#303030",
+                        "on-secondary-fixed": "#1b1b1b",
+                        "outline": "#a78b7f",
+                        "tertiary-container": "#757778",
+                        "primary-fixed-dim": "#ffb693",
+                        "tertiary-fixed": "#e2e2e3",
+                        "on-primary-fixed-variant": "#7a3000",
+                        "error-container": "#93000a",
+                        "on-tertiary-container": "#ffffff",
+                        "on-secondary": "#303030",
+                        "surface": "#131313",
+                        "surface-dim": "#131313",
+                        "surface-container-highest": "#353535",
+                        "on-tertiary": "#2e3132",
+                        "inverse-surface": "#e2e2e2",
+                        "on-surface-variant": "#dfc0b3",
+                        "surface-variant": "#353535",
+                        "secondary-fixed-dim": "#c6c6c6",
+                        "primary": "#ffb693",
+                        "on-primary-fixed": "#351000",
+                        "on-secondary-fixed-variant": "#474747",
+                        "on-error": "#690005",
+                        "on-primary-container": "#ffffff",
+                        "surface-container": "#1f1f1f",
+                        "surface-bright": "#393939",
+                        "secondary": "#c6c6c6",
+                        "on-background": "#e2e2e2"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-black text-white selection:bg-orange-500/30">
+<div class="flex min-h-screen">
+<!-- SideNavBar -->
+<aside class="hidden md:flex flex-col h-screen w-64 border-r bg-zinc-950 border-zinc-800 fixed left-0 top-0 py-4 z-50">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3 mb-2">
+<div class="w-8 h-8 bg-orange-500 rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-black text-lg" style="font-variation-settings: 'FILL' 1;">rocket_launch</span>
+</div>
+<span class="text-orange-500 font-black text-lg">System Core</span>
+</div>
+<p class="text-xs text-zinc-500 font-medium font-inter uppercase tracking-widest">Predictive Engine</p>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-sm font-medium font-inter text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 transition-all rounded" href="Main_Dashboard.html">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-sm font-medium font-inter text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 transition-all rounded" href="Live_Prediction_Panel.html">
+<span class="material-symbols-outlined">query_stats</span>
+<span>Live Prediction</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-sm font-medium font-inter text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 transition-all rounded" href="Model_Insights.html">
+<span class="material-symbols-outlined">insights</span>
+<span>Model Insights</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-sm font-medium font-inter text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 transition-all rounded" href="Model_Details_Architecture.html">
+<span class="material-symbols-outlined">analytics</span>
+<span>Model Details</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-sm font-medium font-inter text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 transition-all rounded" href="Data_Explorer.html">
+<span class="material-symbols-outlined">database</span>
+<span>Data Explorer</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-sm font-medium font-inter text-orange-500 bg-zinc-900 border-r-2 border-orange-500 transition-all" href="API_Deployment_Demo.html">
+<span class="material-symbols-outlined">api</span>
+<span>API Demo</span>
+</a>
+</nav>
+<div class="px-6 mt-auto">
+<div class="p-4 bg-zinc-900 rounded-lg border border-zinc-800">
+<p class="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">Status</p>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+<span class="text-xs text-zinc-300 font-medium">Engine v4.2.1-Stable</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-64 flex flex-col">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center px-6 h-16 w-full bg-black text-orange-500 font-inter tracking-tight border-b border-zinc-800 sticky top-0 z-40">
+<div class="flex items-center gap-8">
+<h1 class="text-xl font-bold uppercase tracking-widest text-white">AeroPredict AI</h1>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden lg:flex items-center bg-zinc-900 rounded px-3 py-1.5 border border-zinc-800">
+<span class="material-symbols-outlined text-zinc-500 text-sm mr-2" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm text-zinc-300 w-48 placeholder:text-zinc-600" placeholder="Search parameters..." type="text"/>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-zinc-400 hover:text-white transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-zinc-400 hover:text-white transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-zinc-700">
+<img alt="User profile" data-alt="close-up portrait of a high-tech engineering professional in a dark laboratory setting with orange rim lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCeLon4k44AXKKyYdoDLXfD3eqJ_wXgE12IEhAPEkCebXeJQSlmLBsbCmoYVnYCLYvRMzRUQZhq6HcUnLUcIfpGGgb2-1d8i_leQtlEiEJZP8wo2eK6XysQrirkQL5Fg7wTGoIvea3ftZAeTJCGWhYx2mdLRP5wyBcLbwymn3p_xZ_g00F3w3JRVomxj89x5_qJpELUCt-bwUIwS5lf3CZUr6X3iFDpYpxl2pEzbwdT0TESkp7xIfdJ9tXeZCexdLlggGgmeQPzNH8"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="p-8 space-y-8">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h2 class="text-3xl font-extrabold tracking-tight text-white mb-2">API Deployment Playground</h2>
+<p class="text-zinc-500 max-w-2xl">Test the AeroPredict engine integration. Send raw sensor data streams to the inference endpoint and receive remaining useful life (RUL) predictions in real-time.</p>
+</div>
+<div class="flex items-center gap-4 bg-zinc-900 p-1 rounded-lg border border-zinc-800">
+<button class="px-4 py-2 bg-orange-500 text-black font-bold text-sm rounded shadow-lg shadow-orange-500/20 flex items-center gap-2 hover:bg-orange-400 transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="send">send</span>
+                            Send Request
+                        </button>
+</div>
+</div>
+<!-- Performance Stats Bar -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="bg-zinc-950 border border-zinc-800 p-4 rounded flex items-center gap-4">
+<div class="w-10 h-10 rounded bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
+<span class="material-symbols-outlined text-orange-500" data-icon="speed">speed</span>
+</div>
+<div>
+<p class="text-[10px] text-zinc-500 uppercase tracking-tighter">Avg Latency</p>
+<p class="text-xl font-bold text-white">12<span class="text-xs text-orange-500 ml-1">ms</span></p>
+</div>
+</div>
+<div class="bg-zinc-950 border border-zinc-800 p-4 rounded flex items-center gap-4">
+<div class="w-10 h-10 rounded bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
+<span class="material-symbols-outlined text-orange-500" data-icon="verified">verified</span>
+</div>
+<div>
+<p class="text-[10px] text-zinc-500 uppercase tracking-tighter">Model Version</p>
+<p class="text-xl font-bold text-white">v4.2.1-Stable</p>
+</div>
+</div>
+<div class="bg-zinc-950 border border-zinc-800 p-4 rounded flex items-center gap-4">
+<div class="w-10 h-10 rounded bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
+<span class="material-symbols-outlined text-orange-500" data-icon="hub">hub</span>
+</div>
+<div>
+<p class="text-[10px] text-zinc-500 uppercase tracking-tighter">Active Nodes</p>
+<p class="text-xl font-bold text-white">14/14</p>
+</div>
+</div>
+<div class="bg-zinc-950 border border-zinc-800 p-4 rounded flex items-center gap-4">
+<div class="w-10 h-10 rounded bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
+<span class="material-symbols-outlined text-orange-500" data-icon="query_stats">query_stats</span>
+</div>
+<div>
+<p class="text-[10px] text-zinc-500 uppercase tracking-tighter">Throughput</p>
+<p class="text-xl font-bold text-white">1.2k<span class="text-xs text-zinc-500 ml-1">req/s</span></p>
+</div>
+</div>
+</div>
+<!-- API Interaction Panel -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<!-- Request Panel -->
+<div class="flex flex-col border border-zinc-800 rounded-xl overflow-hidden bg-zinc-950">
+<div class="bg-zinc-900 px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-red-500/50"></span>
+<span class="w-3 h-3 rounded-full bg-yellow-500/50"></span>
+<span class="w-3 h-3 rounded-full bg-green-500/50"></span>
+<span class="ml-4 text-xs font-bold text-zinc-400 uppercase tracking-widest">POST /v1/predict</span>
+</div>
+<div class="flex gap-2">
+<button class="p-1 text-zinc-500 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+</div>
+<div class="p-6 code-font text-sm leading-relaxed overflow-auto max-h-[500px]">
+<pre class="text-zinc-400">{
+  <span class="text-orange-500">"engine_id"</span>: <span class="text-white">"AE-7700-X1"</span>,
+  <span class="text-orange-500">"timestamp"</span>: <span class="text-white">"2024-05-20T14:30:01.44Z"</span>,
+  <span class="text-orange-500">"sensor_data"</span>: {
+    <span class="text-orange-500">"T24"</span>: <span class="text-white">642.33</span>,
+    <span class="text-orange-500">"T50"</span>: <span class="text-white">1589.70</span>,
+    <span class="text-orange-500">"P30"</span>: <span class="text-white">554.36</span>,
+    <span class="text-orange-500">"Nf"</span>: <span class="text-white">2388.06</span>,
+    <span class="text-orange-500">"Nc"</span>: <span class="text-white">9046.19</span>,
+    <span class="text-orange-500">"Ps30"</span>: <span class="text-white">47.47</span>,
+    <span class="text-orange-500">"phi"</span>: <span class="text-white">521.66</span>,
+    <span class="text-orange-500">"NRf"</span>: <span class="text-white">2388.02</span>,
+    <span class="text-orange-500">"NRc"</span>: <span class="text-white">8131.49</span>,
+    <span class="text-orange-500">"BPR"</span>: <span class="text-white">8.41</span>
+  },
+  <span class="text-orange-500">"flight_phase"</span>: <span class="text-white">"CLIMB"</span>,
+  <span class="text-orange-500">"ambient_temp"</span>: <span class="text-white">-12.4</span>
+}</pre>
+</div>
+</div>
+<!-- Response Panel -->
+<div class="flex flex-col border border-zinc-800 rounded-xl overflow-hidden bg-zinc-950">
+<div class="bg-zinc-900 px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-green-500 uppercase tracking-widest">200 OK</span>
+<span class="text-[10px] text-zinc-500 ml-2">Response Time: 12.4ms</span>
+</div>
+</div>
+<div class="p-6 code-font text-sm leading-relaxed overflow-auto max-h-[500px]">
+<pre class="text-zinc-400">{
+  <span class="text-orange-500">"status"</span>: <span class="text-white">"success"</span>,
+  <span class="text-orange-500">"prediction"</span>: {
+    <span class="text-orange-500">"predicted_rul"</span>: <span class="text-orange-500 font-bold">142</span>,
+    <span class="text-orange-500">"confidence_score"</span>: <span class="text-white">0.9842</span>,
+    <span class="text-orange-500">"alert_level"</span>: <span class="text-white">"LOW"</span>,
+    <span class="text-orange-500">"maintenance_window"</span>: <span class="text-white">"2024-07-15"</span>
+  },
+  <span class="text-orange-500">"metadata"</span>: {
+    <span class="text-orange-500">"model_id"</span>: <span class="text-white">"aeropredict-v4-final"</span>,
+    <span class="text-orange-500">"latency_ms"</span>: <span class="text-white">12.4</span>,
+    <span class="text-orange-500">"compute_region"</span>: <span class="text-white">"us-east-industrial-1"</span>
+  }
+}</pre>
+<div class="mt-8 pt-8 border-t border-zinc-900">
+<p class="text-[10px] text-zinc-500 uppercase tracking-widest mb-4">Visual Interpretation</p>
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<span class="text-xs text-zinc-400">RUL Confidence</span>
+<div class="w-48 h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+<div class="h-full bg-orange-500 w-[98%]"></div>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-xs text-zinc-400">System Latency</span>
+<div class="w-48 h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+<div class="h-full bg-orange-500 w-[12%]"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Documentation Quick Links -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="group p-6 bg-zinc-950 border border-zinc-800 rounded hover:border-orange-500/50 transition-all cursor-pointer">
+<div class="mb-4 text-orange-500 group-hover:scale-110 transition-transform origin-left">
+<span class="material-symbols-outlined text-3xl" data-icon="description">description</span>
+</div>
+<h3 class="text-lg font-bold text-white mb-2">API Reference</h3>
+<p class="text-sm text-zinc-500">Complete documentation for all AeroPredict endpoints and data schemas.</p>
+</div>
+<div class="group p-6 bg-zinc-950 border border-zinc-800 rounded hover:border-orange-500/50 transition-all cursor-pointer">
+<div class="mb-4 text-orange-500 group-hover:scale-110 transition-transform origin-left">
+<span class="material-symbols-outlined text-3xl" data-icon="terminal">terminal</span>
+</div>
+<h3 class="text-lg font-bold text-white mb-2">SDK &amp; Client Libraries</h3>
+<p class="text-sm text-zinc-500">Official wrappers for Python, C++, and Rust for high-performance integration.</p>
+</div>
+<div class="group p-6 bg-zinc-950 border border-zinc-800 rounded hover:border-orange-500/50 transition-all cursor-pointer">
+<div class="mb-4 text-orange-500 group-hover:scale-110 transition-transform origin-left">
+<span class="material-symbols-outlined text-3xl" data-icon="security">security</span>
+</div>
+<h3 class="text-lg font-bold text-white mb-2">Auth &amp; Security</h3>
+<p class="text-sm text-zinc-500">Managing API keys, HMAC signatures, and secure telemetry transmission.</p>
+</div>
+</div>
+</div>
+<!-- Footer Area -->
+<footer class="mt-auto p-6 border-t border-zinc-900 flex justify-between items-center text-xs text-zinc-600">
+<p>© 2024 AeroPredict AI Systems Group. Confidential.</p>
+<div class="flex gap-4">
+<a class="hover:text-zinc-400" href="#">Security Policy</a>
+<a class="hover:text-zinc-400" href="#">System Health</a>
+</div>
+</footer>
+</main>
+</div>
+</body></html>
