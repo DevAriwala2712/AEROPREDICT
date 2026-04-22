@@ -463,6 +463,136 @@ def engine_ids() -> Any:
         return jsonify({"error": str(exc)}), 500
 
 
+@app.get("/api/explorer")
+def explorer() -> Any:
+    dataset = request.args.get("dataset", service.dataset).upper()
+    limit = request.args.get("limit", default=25, type=int) or 25
+
+    try:
+        cache = _get_dataset_cache(dataset)
+        train_df, test_df, _ = load_data(dataset)
+        latest_rows = test_df.sort_values(["unit_id", "cycle"]).groupby("unit_id").tail(1)
+
+        prediction_by_engine = {
+            int(uid): {"actualRul": float(actual), "predictedRul": float(predicted)}
+            for uid, actual, predicted in zip(cache["unit_ids"], cache["y_test"], cache["predictions"])
+        }
+
+        explorer_rows: list[dict[str, Any]] = []
+        for _, row in latest_rows.head(limit).iterrows():
+            engine_id = int(row["unit_id"])
+            prediction = prediction_by_engine.get(engine_id, {"actualRul": 0.0, "predictedRul": 0.0})
+            predicted_rul = float(prediction["predictedRul"])
+            actual_rul = float(prediction["actualRul"])
+            health = max(0.0, min(100.0, (predicted_rul / service.max_rul) * 100.0))
+            if predicted_rul < 20:
+                status = "CRITICAL"
+            elif predicted_rul < 60:
+                status = "WARNING"
+            else:
+                status = "NOMINAL"
+
+            engine_history = test_df[test_df["unit_id"] == engine_id].sort_values("cycle")
+            trend_source = engine_history["sensor_2"].tail(8).to_numpy(dtype=np.float32)
+            if len(trend_source) == 0:
+                trend_source = np.zeros(8, dtype=np.float32)
+            trend_min = float(trend_source.min())
+            trend_max = float(trend_source.max())
+            if trend_max - trend_min < 1e-8:
+                trend = [50.0 for _ in trend_source]
+            else:
+                trend = [float(((value - trend_min) / (trend_max - trend_min)) * 100.0) for value in trend_source]
+
+            explorer_rows.append(
+                {
+                    "engineId": engine_id,
+                    "cycle": int(row["cycle"]),
+                    "status": status,
+                    "t2": float(row["sensor_2"]),
+                    "p30": float(row["sensor_3"]),
+                    "n1": float(row["sensor_4"]),
+                    "vibe": float(row["sensor_11"]),
+                    "health": round(health, 1),
+                    "actualRul": round(actual_rul, 1),
+                    "predictedRul": round(predicted_rul, 1),
+                    "error": round(abs(predicted_rul - actual_rul), 1),
+                    "trend": trend,
+                }
+            )
+
+        summary = {
+            "dataset": dataset,
+            "engineCount": len(explorer_rows),
+            "criticalCount": sum(1 for row in explorer_rows if row["status"] == "CRITICAL"),
+            "warningCount": sum(1 for row in explorer_rows if row["status"] == "WARNING"),
+            "averageHealth": round(float(np.mean([row["health"] for row in explorer_rows])) if explorer_rows else 0.0, 1),
+        }
+
+        return jsonify({"summary": summary, "rows": explorer_rows})
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.get("/api/notifications")
+def notifications() -> Any:
+    """Returns lightweight dashboard alerts derived from current model outputs."""
+    dataset = request.args.get("dataset", service.dataset).upper()
+    limit = request.args.get("limit", default=5, type=int) or 5
+
+    try:
+        cache = _get_dataset_cache(dataset)
+        predictions = cache["predictions"]
+        unit_ids = cache["unit_ids"]
+
+        alerts: list[dict[str, Any]] = []
+        for uid, pred in zip(unit_ids, predictions):
+            predicted_rul = float(pred)
+            if predicted_rul < 20:
+                level = "critical"
+                title = f"Engine {int(uid)} critical"
+                message = f"Predicted RUL is {predicted_rul:.1f} cycles. Immediate maintenance recommended."
+            elif predicted_rul < 60:
+                level = "warning"
+                title = f"Engine {int(uid)} warning"
+                message = f"Predicted RUL is {predicted_rul:.1f} cycles. Schedule maintenance soon."
+            else:
+                continue
+
+            alerts.append(
+                {
+                    "id": f"{dataset}-{int(uid)}-{level}",
+                    "level": level,
+                    "title": title,
+                    "message": message,
+                    "dataset": dataset,
+                }
+            )
+
+        alerts.sort(key=lambda item: 0 if item["level"] == "critical" else 1)
+        alerts = alerts[: max(1, min(limit, 20))]
+
+        if not alerts:
+            return jsonify(
+                {
+                    "dataset": dataset,
+                    "unreadCount": 0,
+                    "notifications": [],
+                    "checkedAt": np.datetime64("now").astype(str),
+                }
+            )
+
+        return jsonify(
+            {
+                "dataset": dataset,
+                "unreadCount": len(alerts),
+                "notifications": alerts,
+                "checkedAt": np.datetime64("now").astype(str),
+            }
+        )
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
 @app.get("/api/evaluate-fresh")
 def evaluate_fresh() -> Any:
     """

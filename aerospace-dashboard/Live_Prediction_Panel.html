@@ -8,6 +8,9 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="theme.css" rel="stylesheet"/>
+<script defer src="theme.js"></script>
+<script defer src="ui_features.js"></script>
 <script id="tailwind-config">
   tailwind.config = { darkMode:"class", theme:{ extend:{ fontFamily:{ headline:["Inter"], body:["Inter"] } } } }
 </script>
@@ -48,6 +51,55 @@
     padding:.15rem .5rem; border-radius:999px; background:rgba(163,230,53,.15); color:#a3e635; border:1px solid #a3e635; }
   .known-badge { font-size:.6rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
     padding:.15rem .5rem; border-radius:999px; background:rgba(56,189,248,.15); color:#38bdf8; border:1px solid #38bdf8; }
+
+  html[data-theme="light"] body,
+  html[data-theme="light"] main,
+  html[data-theme="light"] aside,
+  html[data-theme="light"] header {
+    background-color:#f1f5f9 !important;
+    color:#0f172a !important;
+  }
+
+  html[data-theme="light"] .bg-black,
+  html[data-theme="light"] .bg-black\/90,
+  html[data-theme="light"] .bg-zinc-950,
+  html[data-theme="light"] .bg-zinc-950\/50,
+  html[data-theme="light"] .bg-zinc-900,
+  html[data-theme="light"] .bg-zinc-900\/70,
+  html[data-theme="light"] .bg-zinc-900\/60 {
+    background-color:#ffffff !important;
+  }
+
+  html[data-theme="light"] .waveform-grid {
+    background-image:linear-gradient(rgba(148,163,184,.35) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.35) 1px, transparent 1px) !important;
+  }
+
+  html[data-theme="light"] .border-zinc-800,
+  html[data-theme="light"] .border-zinc-700 {
+    border-color:#cbd5e1 !important;
+  }
+
+  html[data-theme="light"] .text-white,
+  html[data-theme="light"] .text-zinc-300,
+  html[data-theme="light"] .text-zinc-400 {
+    color:#0f172a !important;
+  }
+
+  html[data-theme="light"] .text-zinc-500,
+  html[data-theme="light"] .text-zinc-600 {
+    color:#475569 !important;
+  }
+
+  html[data-theme="light"] .mode-tab {
+    border-color:#94a3b8;
+    color:#334155;
+    background:#ffffff;
+  }
+
+  html[data-theme="light"] .mode-tab:not(.active):hover {
+    border-color:#ea580c;
+    color:#c2410c;
+  }
 </style>
 </head>
 <body class="bg-black text-white antialiased">
@@ -321,7 +373,19 @@
 Chart.defaults.color = '#71717a';
 Chart.defaults.borderColor = '#27272a';
 
-const API = 'http://127.0.0.1:8000';
+const SETTINGS_KEY = 'aeropredict-ui-settings';
+const DEFAULT_API = 'http://127.0.0.1:8000';
+let API = getConfiguredApiBase();
+
+function getConfiguredApiBase() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    const configured = String(parsed.apiBase || '').trim().replace(/\/$/, '');
+    return configured || DEFAULT_API;
+  } catch {
+    return DEFAULT_API;
+  }
+}
 
 // ── State ────────────────────────────────────────────────────────────
 let mode = 'specific';          // 'specific' | 'random'
@@ -590,6 +654,10 @@ async function init() {
 }
 
 window.addEventListener('DOMContentLoaded', init);
+window.addEventListener('aeropredict:settings-updated', () => {
+  API = getConfiguredApiBase();
+  init();
+});
 </script>
 </body>
 </html>
