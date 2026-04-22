@@ -7,6 +7,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="theme.css" rel="stylesheet"/>
+<script defer src="theme.js"></script>
+<script defer src="ui_features.js"></script>
 <script id="tailwind-config">
       tailwind.config = {
         darkMode: "class",
@@ -229,6 +232,9 @@
 </div>
 </div>
 </div>
+<div class="relative h-64 w-full">
+<canvas id="loss-canvas"></canvas>
+</div>
 <!-- LSTM Latent State Degradation -->
 <div class="col-span-12 lg:col-span-7 bg-zinc-950 border border-zinc-800 p-6">
 <div class="flex items-center justify-between mb-6">
@@ -241,7 +247,7 @@
 <div class="flex items-center gap-1"><div class="w-2 h-2 bg-zinc-600"></div> <span class="text-zinc-400">STABLE</span></div>
 </div>
 </div>
-<div class="grid grid-cols-16 grid-rows-8 gap-1 h-64">
+<div class="grid grid-cols-16 grid-rows-8 gap-1 h-64" id="latent-grid">
 <!-- Repeated blocks for heat map visualization -->
 <!-- Row 1 -->
 <div class="bg-zinc-900 border border-zinc-800"></div><div class="bg-zinc-900 border border-zinc-800"></div><div class="bg-zinc-900 border border-zinc-800"></div><div class="bg-zinc-900 border border-zinc-800"></div>
@@ -251,13 +257,7 @@
 <!-- Generating a dense visual texture via grid items -->
 <div class="bg-zinc-900"></div><div class="bg-zinc-900"></div><div class="bg-zinc-900"></div><div class="bg-zinc-900"></div><div class="bg-zinc-800"></div><div class="bg-zinc-800"></div><div class="bg-zinc-800"></div><div class="bg-orange-500/10"></div><div class="bg-orange-500/30"></div><div class="bg-orange-500/50"></div><div class="bg-orange-500/80"></div><div class="bg-orange-500"></div><div class="bg-zinc-900"></div><div class="bg-zinc-900"></div><div class="bg-zinc-900"></div><div class="bg-zinc-900"></div>
 <!-- Simplified representation for the rest of the grid -->
-<script>
-                            for(let i=0; i<80; i++) {
-                                let opacity = Math.random() > 0.8 ? 'bg-orange-500/40' : 'bg-zinc-900';
-                                if (i > 40 && i < 60) opacity = 'bg-zinc-800';
-                                document.write(`<div class="${opacity} border border-white/5"></div>`);
-                            }
-                        </script>
+<div class="contents" id="latent-grid-dynamic"></div>
 </div>
 </div>
 <!-- RUL Estimation Accuracy Curve -->
@@ -266,17 +266,7 @@
 <div class="relative h-64 w-full flex items-end justify-between px-2 pb-6">
 <div class="absolute inset-0 chart-grid opacity-30"></div>
 <!-- RUL Trend Line -->
-<div class="w-2 bg-orange-500/20 h-1/4"></div>
-<div class="w-2 bg-orange-500/30 h-1/3"></div>
-<div class="w-2 bg-orange-500/40 h-1/2"></div>
-<div class="w-2 bg-orange-500/50 h-2/3"></div>
-<div class="w-2 bg-orange-500 h-[80%]"></div>
-<div class="w-2 bg-orange-500 h-[85%]"></div>
-<div class="w-2 bg-orange-500 h-[75%]"></div>
-<div class="w-2 bg-orange-500/60 h-[60%]"></div>
-<div class="w-2 bg-orange-500/40 h-[45%]"></div>
-<div class="w-2 bg-orange-500/30 h-[30%]"></div>
-<div class="w-2 bg-orange-500/20 h-[15%]"></div>
+<div class="relative z-10 flex items-end justify-between gap-1 w-full h-full" id="rul-accuracy-bars"></div>
 <div class="absolute top-1/2 left-0 w-full border-t border-dashed border-zinc-600 flex justify-end">
 <span class="text-[8px] text-zinc-500 font-black uppercase -mt-4 mr-2">Target Baseline</span>
 </div>
@@ -301,45 +291,27 @@
 <div class="space-y-4">
 <div class="flex justify-between items-end border-b border-zinc-800 pb-2">
 <span class="text-[10px] font-bold uppercase text-zinc-500">LPC Temp (T2)</span>
-<span class="text-xs font-black text-white">482.12 K</span>
+<span class="text-xs font-black text-white" id="sensor-val-1">--</span>
 </div>
-<div class="h-16 flex items-end gap-1">
-<script>
-                                    for(let i=0; i<20; i++) {
-                                        let h = Math.floor(Math.random() * 40) + 10;
-                                        document.write(`<div class="flex-1 bg-zinc-800" style="height: ${h}px"></div>`);
-                                    }
-                                </script>
+<div class="h-16 flex items-end gap-1" id="sensor-bars-1">
 </div>
 </div>
 <!-- Sensor Row 2 -->
 <div class="space-y-4">
 <div class="flex justify-between items-end border-b border-zinc-800 pb-2">
 <span class="text-[10px] font-bold uppercase text-zinc-500">Fan Speed (N1)</span>
-<span class="text-xs font-black text-white">2,388 RPM</span>
+<span class="text-xs font-black text-white" id="sensor-val-2">--</span>
 </div>
-<div class="h-16 flex items-end gap-1">
-<script>
-                                    for(let i=0; i<20; i++) {
-                                        let h = Math.floor(Math.random() * 50) + 20;
-                                        document.write(`<div class="flex-1 bg-orange-500/40" style="height: ${h}px"></div>`);
-                                    }
-                                </script>
+<div class="h-16 flex items-end gap-1" id="sensor-bars-2">
 </div>
 </div>
 <!-- Sensor Row 3 -->
 <div class="space-y-4">
 <div class="flex justify-between items-end border-b border-zinc-800 pb-2">
 <span class="text-[10px] font-bold uppercase text-zinc-500">Oil Pressure (P15)</span>
-<span class="text-xs font-black text-white">21.61 PSIA</span>
+<span class="text-xs font-black text-white" id="sensor-val-3">--</span>
 </div>
-<div class="h-16 flex items-end gap-1">
-<script>
-                                    for(let i=0; i<20; i++) {
-                                        let h = Math.floor(Math.random() * 30) + 15;
-                                        document.write(`<div class="flex-1 bg-zinc-800" style="height: ${h}px"></div>`);
-                                    }
-                                </script>
+<div class="h-16 flex items-end gap-1" id="sensor-bars-3">
 </div>
 </div>
 </div>
@@ -365,16 +337,48 @@
 </footer>
 </main>
 <script>
-const API = 'http://127.0.0.1:8000';
+const SETTINGS_KEY = 'aeropredict-ui-settings';
+const DEFAULT_API = 'http://127.0.0.1:8000';
+let API = getConfiguredApiBase();
+
+function getConfiguredApiBase() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    const configured = String(parsed.apiBase || '').trim().replace(/\/$/, '');
+    return configured || DEFAULT_API;
+  } catch {
+    return DEFAULT_API;
+  }
+}
+
+function renderBars(containerId, values, colorClass) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = values.map((value) => {
+    const height = Math.max(8, Math.min(62, value));
+    return `<div class="flex-1 ${colorClass}" style="height:${height}px"></div>`;
+  }).join('');
+}
+
+function normalizeSeries(values, minHeight = 12, maxHeight = 62) {
+  if (!values.length) return [];
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  if (Math.abs(max - min) < 1e-8) return values.map(() => (minHeight + maxHeight) / 2);
+  return values.map((value) => minHeight + ((value - min) / (max - min)) * (maxHeight - minHeight));
+}
 
 async function loadInsights() {
   try {
-    const [sumRes, histRes] = await Promise.all([
+    const [sumRes, histRes, predRes] = await Promise.all([
       fetch(`${API}/api/summary`),
-      fetch(`${API}/api/history`)
+      fetch(`${API}/api/history`),
+      fetch(`${API}/api/all-predictions`)
     ]);
     const summary = await sumRes.json();
     const history = await histRes.json();
+    const predictionsPayload = await predRes.json();
+    const predictions = predictionsPayload.engines || [];
 
     // Update hero stats
     const rmse = summary.metrics.bestValRmse;
@@ -400,6 +404,45 @@ async function loadInsights() {
       });
     }
 
+    // Latent grid from error distribution
+    const latentGrid = document.getElementById('latent-grid-dynamic');
+    if (latentGrid) {
+      const errors = predictions.map((item) => Number(item.error || 0));
+      const levels = normalizeSeries(errors.slice(0, 80), 0, 1);
+      latentGrid.innerHTML = levels.map((level) => {
+        const cls = level > 0.7 ? 'bg-orange-500/70' : level > 0.45 ? 'bg-orange-500/35' : level > 0.2 ? 'bg-zinc-800' : 'bg-zinc-900';
+        return `<div class="${cls} border border-white/5"></div>`;
+      }).join('');
+    }
+
+    // RUL bars from actual RUL distribution
+    const rulValues = predictions.slice(0, 24).map((item) => Number(item.actualRul || 0));
+    const normalizedRul = normalizeSeries(rulValues, 12, 210);
+    const rulBars = document.getElementById('rul-accuracy-bars');
+    if (rulBars) {
+      rulBars.innerHTML = normalizedRul.map((height, index) => {
+        const opacity = 0.2 + (index / Math.max(1, normalizedRul.length - 1)) * 0.8;
+        return `<div class="w-2 bg-orange-500" style="height:${height}px;opacity:${opacity.toFixed(2)}"></div>`;
+      }).join('');
+    }
+
+    // Sensor trend mini-bars derived from training history
+    const trainLossSeries = normalizeSeries(history.map((item) => Number(item.loss || 0)).slice(-20), 10, 62);
+    const valRmseSeries = normalizeSeries(history.map((item) => Number(item.val_rmse || 0)).slice(-20), 10, 62);
+    const uncertaintySeries = normalizeSeries(history.map((item) => Number(item.val_mae || item.val_rmse || 0)).slice(-20), 10, 62);
+
+    renderBars('sensor-bars-1', trainLossSeries, 'bg-zinc-700');
+    renderBars('sensor-bars-2', valRmseSeries, 'bg-orange-500/40');
+    renderBars('sensor-bars-3', uncertaintySeries, 'bg-zinc-700');
+
+    const latestPrediction = predictions[0] || {};
+    const sensor1 = document.getElementById('sensor-val-1');
+    const sensor2 = document.getElementById('sensor-val-2');
+    const sensor3 = document.getElementById('sensor-val-3');
+    if (sensor1) sensor1.textContent = `${Number(summary.metrics?.testRmse || 0).toFixed(2)} cycles`;
+    if (sensor2) sensor2.textContent = `${Number(summary.metrics?.testMae || 0).toFixed(2)} cycles`;
+    if (sensor3) sensor3.textContent = `${Number(latestPrediction.error || 0).toFixed(2)} err`;
+
     // Feature list
     const features = summary.config.featureColumns || [];
     const featureContainer = document.getElementById('feature-list');
@@ -413,5 +456,9 @@ async function loadInsights() {
 }
 
 window.addEventListener('DOMContentLoaded', loadInsights);
+window.addEventListener('aeropredict:settings-updated', () => {
+  API = getConfiguredApiBase();
+  loadInsights();
+});
 </script>
 </body></html>
