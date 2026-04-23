@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -680,12 +679,11 @@ def static_pages(filename: str) -> Any:
 
 
 if __name__ == "__main__":
-    # Flask's reloader spawns a child process and exits the parent process,
-    # which surfaces as SystemExit inside VS Code debug sessions.
-    running_under_debugger = sys.gettrace() is not None
     app.run(
         host="127.0.0.1",
         port=8000,
         debug=True,
-        use_reloader=not running_under_debugger,
+        # Keep reloader off in this script entrypoint to avoid SystemExit
+        # under debugpy/VS Code and single-process launcher confusion.
+        use_reloader=False,
     )
