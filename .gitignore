@@ -21,6 +21,7 @@ models/*
 # IDEs
 .vscode/
 .idea/
+.conda-node
 
 # OS
 .DS_Store
