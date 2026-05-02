@@ -185,6 +185,30 @@ Evaluation output includes:
 - Missing feature padding summary
 - Checkpoint metrics snapshot
 
+### Final multi-source training results
+
+Captured from the final multi-source training run (train: `FD001 FD002 FD003 FD004`, mode: `multi-source`, epochs: 20):
+
+| Dataset | RMSE | MAE | NASA score |
+| --- | ---: | ---: | ---: |
+| FD001 | 13.86 | 9.74 | 312.14 |
+| FD002 | 15.08 | 11.26 | 1329.30 |
+| FD003 | 15.73 | 10.84 | 1206.83 |
+| FD004 | 16.22 | 11.78 | 1806.10 |
+
+Saved artifacts from this run:
+
+- `models/lstm_rul.pth` (final checkpoint)
+- `models/scaler.pkl` (saved StandardScaler)
+
+Command used to produce these results:
+
+```bash
+python src/train.py --train-datasets FD001 FD002 FD003 FD004 \
+	--test-datasets FD001 FD002 FD003 FD004 \
+	--mode multi-source --epochs 20 --patience 5
+```
+
 ## API Endpoints
 
 Core endpoints used by dashboards:
