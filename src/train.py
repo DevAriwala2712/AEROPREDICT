@@ -24,12 +24,13 @@ from data_loader import (
 from model import LSTMRULPredictor
 
 MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
+ALL_DATASETS = ["FD001", "FD002", "FD003", "FD004"]
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train an LSTM RUL model on NASA C-MAPSS data for cross-dataset generalization.")
-    parser.add_argument("--train-datasets", nargs="+", default=["FD001"], help="Source dataset(s) for training (e.g. FD001 FD002)")
-    parser.add_argument("--test-datasets", nargs="+", default=["FD001"], help="Target dataset(s) for testing (e.g. FD001 FD003 FD004)")
+    parser.add_argument("--train-datasets", nargs="+", default=ALL_DATASETS, help="Source dataset(s) for training (default: FD001 FD002 FD003 FD004)")
+    parser.add_argument("--test-datasets", nargs="+", default=ALL_DATASETS, help="Target dataset(s) for testing (default: FD001 FD002 FD003 FD004)")
     parser.add_argument("--seq-length", type=int, default=50)
     parser.add_argument("--max-rul", type=int, default=DEFAULT_MAX_RUL)
     parser.add_argument("--hidden-size", type=int, default=64)
@@ -184,9 +185,17 @@ def plot_error_histogram(y_true: np.ndarray, y_pred: np.ndarray, dataset_name: s
 
 def main() -> None:
     args = parse_args()
+    args.train_datasets = [d.upper() for d in args.train_datasets]
+    args.test_datasets = [d.upper() for d in args.test_datasets]
     set_seed(args.seed)
     device = get_device()
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
+
+    unknown_train = [d for d in args.train_datasets if d not in ALL_DATASETS]
+    unknown_test = [d for d in args.test_datasets if d not in ALL_DATASETS]
+    if unknown_train or unknown_test:
+        bad = sorted(set(unknown_train + unknown_test))
+        raise ValueError(f"Unsupported dataset(s): {bad}. Allowed: {ALL_DATASETS}")
 
     mode = args.mode
     if mode == "auto":
