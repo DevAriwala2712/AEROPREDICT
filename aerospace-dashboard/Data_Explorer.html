@@ -4,81 +4,14 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>AERO-NAV | Data Explorer</title>
-<script onerror="window.__tailwindCdnFailed=true" src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="/tailwind.min.css" rel="stylesheet"/>
+<link href="/theme.css" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <link href="/theme.css" rel="stylesheet"/>
 <script defer src="/theme.js"></script>
 <script defer src="/ui_features.js"></script>
-<script>
-        window.tailwind = window.tailwind || {};
-        if (window.__tailwindCdnFailed && !document.querySelector('link[data-tailwind-fallback="true"]')) {
-            const fallbackCss = document.createElement("link");
-            fallbackCss.rel = "stylesheet";
-            fallbackCss.href = "https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css";
-            fallbackCss.setAttribute("data-tailwind-fallback", "true");
-            document.head.appendChild(fallbackCss);
-        }
-</script>
-<script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    "colors": {
-                        "background": "#131313",
-                        "on-error": "#690005",
-                        "tertiary-container": "#757778",
-                        "on-error-container": "#ffdad6",
-                        "surface-container-low": "#1b1b1b",
-                        "on-primary-container": "#ffffff",
-                        "primary-fixed-dim": "#ffb693",
-                        "tertiary": "#c6c6c7",
-                        "outline-variant": "#584238",
-                        "primary": "#f97316",
-                        "on-primary-fixed-variant": "#7a3000",
-                        "surface-variant": "#353535",
-                        "surface-container": "#1f1f1f",
-                        "surface-tint": "#ffb693",
-                        "on-tertiary-fixed-variant": "#454748",
-                        "tertiary-fixed": "#e2e2e3",
-                        "secondary-container": "#474747",
-                        "secondary": "#c6c6c6",
-                        "surface-container-lowest": "#0e0e0e",
-                        "on-tertiary": "#2e3132",
-                        "on-background": "#e2e2e2",
-                        "error": "#ffb4ab",
-                        "secondary-fixed": "#e2e2e2",
-                        "surface-container-high": "#2a2a2a",
-                        "on-secondary": "#303030",
-                        "surface-dim": "#131313",
-                        "on-primary-fixed": "#351000",
-                        "inverse-surface": "#e2e2e2",
-                        "tertiary-fixed-dim": "#c6c6c7",
-                        "on-secondary-container": "#b5b5b5",
-                        "surface": "#131313",
-                        "inverse-on-surface": "#303030",
-                        "outline": "#262626",
-                        "on-surface-variant": "#dfc0b3",
-                        "on-secondary-fixed-variant": "#474747",
-                        "on-surface": "#e2e2e2",
-                        "on-secondary-fixed": "#1b1b1b",
-                        "on-tertiary-container": "#ffffff",
-                        "secondary-fixed-dim": "#c6c6c6",
-                        "on-tertiary-fixed": "#1a1c1d",
-                        "inverse-primary": "#a04100",
-                        "error-container": "#93000a",
-                        "on-primary": "#562000",
-                        "surface-container-highest": "#353535",
-                        "surface-bright": "#393939",
-                        "primary-container": "#c75300",
-                        "primary-fixed": "#ffdbcb"
-                    },
-                    "borderRadius": {
-                        "DEFAULT": "0.5rem",
-                        "lg": "1rem",
-                        "xl": "1.5rem",
                         "full": "9999px"
                     },
                     "fontFamily": {

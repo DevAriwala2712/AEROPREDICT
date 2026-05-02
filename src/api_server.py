@@ -264,6 +264,11 @@ class ModelApiService:
             X_test, y_test, unit_ids = prepare_test_samples(
                 test_df, rul_df, feature_columns, seq_length=self.seq_length, max_rul=self.max_rul
             )
+            # reduce memory by ensuring float32 arrays before large reshape/scale operations
+            try:
+                X_test = X_test.astype(np.float32)
+            except Exception:
+                pass
             if self.scaler is None or self.model is None:
                 return {
                     "train_df": None,
@@ -273,7 +278,9 @@ class ModelApiService:
                     "unit_ids": None,
                     "predictions": None,
                 }
-            X_scaled = self.scaler.transform(X_test.reshape(-1, X_test.shape[-1])).reshape(X_test.shape)
+            # perform scaling on float32 data to halve memory footprint vs float64
+            reshaped = X_test.reshape(-1, X_test.shape[-1])
+            X_scaled = self.scaler.transform(reshaped).astype(np.float32).reshape(X_test.shape)
             X_tensor = torch.tensor(X_scaled, dtype=torch.float32, device=self.device)
             with torch.no_grad():
                 predictions = self.model(X_tensor).cpu().numpy().flatten()
