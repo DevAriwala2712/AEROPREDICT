@@ -15,7 +15,7 @@
       const label = button.querySelector("[data-theme-toggle-label]");
       const icon = button.querySelector("[data-theme-toggle-icon]");
       if (label) {
-        label.textContent = theme === "light" ? "Light Mode" : "Dark Mode";
+        label.textContent = theme === "light" ? "Dark Mode" : "Light Mode";
       }
       if (icon) {
         icon.textContent = theme === "light" ? "dark_mode" : "light_mode";

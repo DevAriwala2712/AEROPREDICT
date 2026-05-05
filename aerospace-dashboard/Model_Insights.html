@@ -335,27 +335,41 @@ function drawFeatureImportanceChart(features, values) {
   const container = document.getElementById('feature-list');
   if (!container) return;
 
-  const safeValues = Array.isArray(values) ? values.map((v) => Number(v) || 0) : [];
-  const pairs = (Array.isArray(features) ? features : []).map((f, i) => ({ label: toTitle(f), value: safeValues[i] || 0 }));
-  const maxVal = Math.max(...pairs.map(p => p.value), 0.0001);
-
-  // Show top 10 in original stacked list order (largest first)
-  const sorted = pairs.slice().sort((a,b) => b.value - a.value).slice(0, 20);
-
-  if (sorted.length === 0) {
-    container.innerHTML = '<div class="text-zinc-500 text-xs">Feature importance unavailable</div>';
+  // Validate input data
+  if (!Array.isArray(features) || !Array.isArray(values) || features.length === 0) {
+    container.innerHTML = '<div class="text-zinc-500 text-xs">No feature importance data available</div>';
     return;
   }
 
+  const safeValues = values.map((v) => {
+    const num = Number(v);
+    return isFinite(num) ? Math.max(num, 0) : 0;
+  });
+  
+  const pairs = features.map((f, i) => ({
+    label: toTitle(String(f)),
+    value: safeValues[i] || 0
+  })).filter(p => p.value > 0);
+
+  if (pairs.length === 0) {
+    container.innerHTML = '<div class="text-zinc-500 text-xs">No positive feature importance values</div>';
+    return;
+  }
+
+  // Sort and take top 10
+  const maxVal = Math.max(...pairs.map(p => p.value));
+  const sorted = pairs.sort((a, b) => b.value - a.value).slice(0, 10);
+
   container.innerHTML = sorted.map((p) => {
     const pct = (p.value / maxVal) * 100;
-    return `<div class="space-y-1">
-      <div class="flex justify-between items-center">
-        <div class="text-[10px] font-bold uppercase text-zinc-400">${p.label}</div>
-        <div class="text-[10px] font-bold text-zinc-400">${Math.round(pct)}%</div>
+    const barWidth = Math.max(5, pct);
+    return `<div class="mb-3">
+      <div class="flex justify-between items-center mb-1">
+        <span class="text-[10px] font-bold uppercase text-zinc-300 truncate">${p.label}</span>
+        <span class="text-[10px] font-bold text-zinc-400 ml-2">${Math.round(pct)}%</span>
       </div>
-      <div class="h-2 bg-zinc-900 w-full rounded-sm overflow-hidden">
-        <div class="h-full bg-orange-500" style="width:${Math.max(2, pct)}%"></div>
+      <div class="h-2 bg-zinc-800 w-full rounded overflow-hidden">
+        <div class="h-full bg-orange-500 transition-all" style="width:${barWidth}%"></div>
       </div>
     </div>`;
   }).join('');
