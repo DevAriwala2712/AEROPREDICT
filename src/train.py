@@ -32,15 +32,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--test-datasets", nargs="+", default=["FD001"], help="Target dataset(s) for testing (e.g. FD001 FD003 FD004)")
     parser.add_argument("--seq-length", type=int, default=50)
     parser.add_argument("--max-rul", type=int, default=DEFAULT_MAX_RUL)
-    parser.add_argument("--hidden-size", type=int, default=64)
-    parser.add_argument("--num-layers", type=int, default=2)
-    parser.add_argument("--dropout", type=float, default=0.2)
+    parser.add_argument("--hidden-size", type=int, default=128)
+    parser.add_argument("--num-layers", type=int, default=3)
+    parser.add_argument("--dropout", type=float, default=0.3)
     parser.add_argument("--batch-size", type=int, default=128)
-    parser.add_argument("--epochs", type=int, default=30)
+    parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--learning-rate", type=float, default=1e-3)
-    parser.add_argument("--weight-decay", type=float, default=1e-5)
+    parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--validation-fraction", type=float, default=0.2)
-    parser.add_argument("--patience", type=int, default=7)
+    parser.add_argument("--patience", type=int, default=10)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--mode", type=str, default="auto", choices=["auto", "in-distribution", "cross-dataset", "multi-source"],
                         help="Experiment mode label. If auto, inferred from dataset args.")
@@ -121,17 +121,8 @@ def load_test_sets(datasets: list[str], feature_columns: list[str], seq_length: 
     test_sets = {}
     for ds in datasets:
         _, test_df, rul_df = load_data(ds)
-        # Handle cases where source features are missing in target dataset
-        available_features = [f for f in feature_columns if f in test_df.columns]
-        missing_features = [f for f in feature_columns if f not in test_df.columns]
-        
-        X_test, y_test = prepare_test_data(test_df, rul_df, available_features, seq_length=seq_length, max_rul=max_rul)
-        
-        # Zero-pad missing features if any (simple cross-dataset robustness)
-        if missing_features:
-            zeros = np.zeros((X_test.shape[0], X_test.shape[1], len(missing_features)), dtype=np.float32)
-            X_test = np.concatenate([X_test, zeros], axis=-1)
-            
+        # prepare_test_data now handles feature engineering internally
+        X_test, y_test = prepare_test_data(test_df, rul_df, feature_columns, seq_length=seq_length, max_rul=max_rul)
         test_sets[ds] = (X_test, y_test)
     return test_sets
 
@@ -229,6 +220,11 @@ def main() -> None:
     scaler, X_train, scaled_others = fit_and_scale(X_train, others_to_scale)
     X_val = scaled_others["val"]
     
+    # Save scaler immediately for compatibility
+    scaler_path = MODELS_DIR / "scaler.pkl"
+    with scaler_path.open("wb") as handle:
+        pickle.dump(scaler, handle)
+    print(f"Saved scaler to {scaler_path}")
     # Create loaders
     train_loader = make_loader(X_train, y_train, batch_size=args.batch_size, shuffle=True)
     val_loader = make_loader(X_val, y_val, batch_size=args.batch_size, shuffle=False)
@@ -239,7 +235,8 @@ def main() -> None:
         num_layers=args.num_layers,
         dropout=args.dropout,
     ).to(device)
-    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+    optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3, min_lr=1e-5)
     criterion = nn.MSELoss()
 
     history: list[dict] = []
@@ -274,11 +271,30 @@ def main() -> None:
         if val_rmse < best_val_rmse:
             best_val_rmse, best_epoch, patience_counter = val_rmse, epoch, 0
             best_state = {k: v.detach().cpu() for k, v in model.state_dict().items()}
+            
+            # Save intermediate best checkpoint for live updates
+            temp_checkpoint = {
+                "state_dict": best_state,
+                "config": {
+                    "input_size": len(feature_columns),
+                    "hidden_size": args.hidden_size,
+                    "num_layers": args.num_layers,
+                    "dropout": args.dropout,
+                    "seq_length": args.seq_length,
+                    "max_rul": args.max_rul,
+                    "feature_columns": feature_columns,
+                },
+                "metrics": {"val_rmse": val_rmse, "epoch": epoch}
+            }
+            torch.save(temp_checkpoint, MODELS_DIR / "lstm_rul.pth")
+            print(f"--> Saved best checkpoint (RMSE: {val_rmse:.4f})")
         else:
             patience_counter += 1
             if patience_counter >= args.patience:
                 print(f"Early stopping triggered at epoch {epoch}.")
                 break
+        
+        scheduler.step(val_rmse)
 
     if best_state is None:
         raise RuntimeError("Training completed without producing a checkpoint.")

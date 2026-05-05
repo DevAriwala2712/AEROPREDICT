@@ -269,13 +269,7 @@
             </div>
           </div>
           <div id="heatmap-container" class="grid grid-cols-21 gap-1 h-32">
-            <script>
-              for(let i=0; i<21*10; i++) {
-                const intensity = Math.random();
-                const color = intensity > 0.8 ? 'bg-orange-500' : (intensity > 0.4 ? 'bg-orange-900/40' : 'bg-zinc-900');
-                document.write(`<div class="${color} rounded-sm" title="Sensor ${i%21 + 1}"></div>`);
-              }
-            </script>
+            <!-- Heatmap will be generated here -->
           </div>
           <div class="mt-2 flex justify-between text-[8px] font-bold text-zinc-600 uppercase">
             <span>S1</span>
@@ -647,7 +641,39 @@ async function loadEngineHistory(engineId, ds) {
       }
     });
 
+    updateHeatmap(d.sensors);
+
   } catch(e) { console.error('History load error', e); }
+}
+
+function updateHeatmap(sensorsData) {
+  const container = document.getElementById('heatmap-container');
+  let html = '';
+  const firstSensor = Object.values(sensorsData)[0];
+  if (!firstSensor) return;
+  const cyclesCount = firstSensor.length;
+  
+  for (let c = 0; c < 10; c++) {
+    const cycleIndex = cyclesCount - 10 + c;
+    for (let s = 1; s <= 21; s++) {
+      const sensorName = 'sensor_' + s;
+      const vals = sensorsData[sensorName];
+      let color = 'bg-zinc-900';
+      
+      if (vals && cycleIndex >= 0 && cycleIndex < vals.length) {
+         const min = Math.min(...vals);
+         const max = Math.max(...vals);
+         const val = vals[cycleIndex];
+         const intensity = max === min ? 0.5 : (val - min) / (max - min);
+         
+         if (intensity > 0.7) color = 'bg-orange-500';
+         else if (intensity > 0.3) color = 'bg-orange-900/40';
+         else color = 'bg-zinc-800';
+      }
+      html += '<div class="' + color + ' rounded-sm" title="Sensor ' + s + '"></div>';
+    }
+  }
+  container.innerHTML = html;
 }
 
 function updateDiagnostics(d) {

@@ -14,12 +14,12 @@ echo "================================"
 cd "$SCRIPT_DIR"
 
 echo ""
-echo "1. Downloading official NASA C-MAPSS data..."
-"$PYTHON_BIN" src/download_data.py
+echo "1. Skipping data download as data already exists..."
+# "$PYTHON_BIN" src/download_data.py
 
 echo ""
-echo "2. Training model on FD001..."
-"$PYTHON_BIN" src/train.py --train-datasets FD001 --test-datasets FD001 --mode in-distribution
+echo "2. Training model on FD001, FD002, FD003, FD004..."
+"$PYTHON_BIN" src/train.py --train-datasets FD001 FD002 FD003 FD004 --test-datasets FD001 FD002 FD003 FD004 --mode multi-source
 
 echo ""
 echo "3. Evaluating saved checkpoint..."

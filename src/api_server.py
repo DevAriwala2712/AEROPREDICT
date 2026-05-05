@@ -20,6 +20,7 @@ from data_loader import (
     load_data,
     prepare_test_samples,
     prepare_train_data,
+    add_features,
 )
 from model import LSTMRULPredictor, predict_with_uncertainty
 from captum.attr import IntegratedGradients
@@ -98,13 +99,18 @@ class ModelApiService:
             return json.loads(self.history_path.read_text(encoding="utf-8"))
         return list(self.checkpoint.get("history", []))
 
+    def _smooth_predictions(self, preds: np.ndarray, window: int = 5) -> np.ndarray:
+        if len(preds) < window:
+            return preds
+        return np.convolve(preds, np.ones(window)/window, mode='same')
+
     def _load_model(self) -> LSTMRULPredictor:
         feature_columns = self.config.get("feature_columns") or []
         model = LSTMRULPredictor(
             input_size=int(self.config.get("input_size", len(feature_columns))),
-            hidden_size=int(self.config.get("hidden_size", 64)),
-            num_layers=int(self.config.get("num_layers", 2)),
-            dropout=float(self.config.get("dropout", 0.2)),
+            hidden_size=int(self.config.get("hidden_size", 128)),
+            num_layers=int(self.config.get("num_layers", 3)),
+            dropout=float(self.config.get("dropout", 0.3)),
         ).to(self.device)
         model.load_state_dict(self.checkpoint["state_dict"])
         model.eval()
@@ -123,6 +129,8 @@ class ModelApiService:
         X_tensor = torch.tensor(X_scaled, dtype=torch.float32, device=self.device)
         with torch.no_grad():
             predictions = self.model(X_tensor).cpu().numpy().flatten()
+            if self.max_rul:
+                predictions = np.clip(predictions, 0, self.max_rul)
 
         rul_indexed = rul_df.reset_index(names="unit_id").assign(unit_id=lambda df: df["unit_id"] + 1)
         rul_indexed = rul_indexed.rename(columns={"RUL": "RUL_final"})
@@ -134,6 +142,10 @@ class ModelApiService:
         prepared_test_df["RUL"] = (prepared_test_df["max_cycle"] - prepared_test_df["cycle"]) + prepared_test_df["RUL_final"]
         if self.max_rul:
             prepared_test_df["RUL"] = prepared_test_df["RUL"].clip(upper=self.max_rul)
+
+        # Add engineered features for history and visualization
+        base_features = [f for f in feature_columns if "_rmean" not in f and "_rstd" not in f]
+        prepared_test_df, _ = add_features(prepared_test_df, base_features)
 
         return {
             "train_df": train_df,
@@ -405,6 +417,8 @@ def _get_dataset_cache(dataset: str) -> dict:
     X_tensor = torch.tensor(X_scaled, dtype=torch.float32, device=service.device)
     with torch.no_grad():
         predictions = service.model(X_tensor).cpu().numpy().flatten()
+        if service.max_rul:
+            predictions = np.clip(predictions, 0, service.max_rul)
 
     rul_indexed = rul_df.reset_index(names="unit_id").assign(unit_id=lambda df: df["unit_id"] + 1)
     rul_indexed = rul_indexed.rename(columns={"RUL": "RUL_final"})
@@ -416,6 +430,10 @@ def _get_dataset_cache(dataset: str) -> dict:
     prepared_test_df["RUL"] = (prepared_test_df["max_cycle"] - prepared_test_df["cycle"]) + prepared_test_df["RUL_final"]
     if service.max_rul:
         prepared_test_df["RUL"] = prepared_test_df["RUL"].clip(upper=service.max_rul)
+
+    # Add engineered features for history and visualization
+    base_features = [f for f in trained_features if "_rmean" not in f and "_rstd" not in f]
+    prepared_test_df, _ = add_features(prepared_test_df, base_features)
 
     cache = {
         "dataset": dataset,
@@ -658,6 +676,9 @@ def engine_history() -> Any:
         )
         with torch.no_grad():
             batch_preds = service.model(batch_tensor).cpu().numpy().flatten()
+
+        # Apply smoothing to the temporal predictions for this engine
+        batch_preds = service._smooth_predictions(batch_preds, window=3)
 
         predicted_ruls = [None] * n_cycles
         for s, pred in zip(scaled_sequences, batch_preds):

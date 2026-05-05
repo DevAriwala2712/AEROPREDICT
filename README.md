@@ -1,52 +1,59 @@
 # Predictive Maintenance of Aircraft Engines - NASA C-MAPSS RUL
 
-Deep learning baseline for Remaining Useful Life (RUL) prediction on the NASA C-MAPSS turbofan benchmark. The project now trains on the real `FD001` subset instead of synthetic demo data.
+Deep learning baseline for Remaining Useful Life (RUL) prediction on the NASA C-MAPSS turbofan benchmark. The project trains on all four NASA subsets (`FD001`, `FD002`, `FD003`, `FD004`) simultaneously for robust multi-source learning across multiple operating conditions and fault modes.
 
 ## What The Pipeline Does
-- Loads `train_FD001.txt`, `test_FD001.txt`, and `RUL_FD001.txt`
-- Parses engine-wise time-series records from NASA C-MAPSS
-- Computes capped training RUL targets
-- Builds fixed-length sequences per engine
-- Drops constant or near-constant channels on FD001
-- Normalizes features using train-only statistics
-- Trains a 2-layer PyTorch LSTM with validation and early stopping
+- Loads training and testing subsets for all four C-MAPSS datasets (`FD001` to `FD004`)
+- Parses engine-wise time-series records and handles cross-dataset normalization
+- Computes capped training RUL targets (default 125 cycles)
+- Builds fixed-length sequences per engine (default 50 cycles)
+- Drops channels that are globally constant across the training sets
+- Normalizes features using train-only statistics to avoid data leakage
+- Trains an advanced Bidirectional PyTorch LSTM (128 hidden units) with a self-attention mechanism, optimized via AdamW and a learning rate scheduler (ReduceLROnPlateau) alongside early stopping
 - Evaluates RMSE, MAE, NASA score, and Monte Carlo dropout uncertainty
 
 ## Quick Start
 
 ### 1. Refresh the official NASA data
 ```bash
-/Users/devariwala/development/no10/.venv/bin/python /Users/devariwala/development/no10/src/download_data.py
+./.venv/bin/python src/download_data.py
 ```
 
-### 2. Train on FD001
+### 2. Train the Multi-Source Model
 ```bash
-/Users/devariwala/development/no10/.venv/bin/python /Users/devariwala/development/no10/src/train.py --dataset FD001
+./.venv/bin/python src/train.py --train-datasets FD001 FD002 FD003 FD004 --test-datasets FD001 FD002 FD003 FD004 --mode multi-source
 ```
 
 ### 3. Evaluate the saved checkpoint
 ```bash
-/Users/devariwala/development/no10/.venv/bin/python /Users/devariwala/development/no10/src/evaluate.py --dataset FD001
+./.venv/bin/python src/evaluate.py --dataset FD002
 ```
 
 ### 4. Run the complete pipeline
 ```bash
-bash /Users/devariwala/development/no10/run_pipeline.sh
+bash run_pipeline.sh
 ```
 
-## Model
-- Architecture: 2-layer LSTM
-- Hidden size: 64
-- Dropout: 0.2
-- Default sequence length: 50 cycles
-- Default capped RUL: 125
-- Optimizer: Adam
-- Loss: MSE
+### 5. Launch Interactive Dashboard (Backend & Frontend)
+```bash
+./.venv/bin/python src/api_server.py
+```
+Access the dashboard at `http://127.0.0.1:8000`
+
+## Advanced Model Architecture (MHA-LSTM)
+The system uses a state-of-the-art **Multi-Head Self-Attention LSTM**:
+- **Feature Engineering**: Rolling window statistics (mean/std) for temporal dynamics.
+- **Backbone**: 3-layer Bidirectional LSTM (hidden size 128).
+- **Attention**: Multi-Head Self-Attention (4 heads) for cycle weighting.
+- **Head**: 3-layer dense prediction head with dropout.
+- **Training**: Universal multi-source training on FD001-FD004.
+- **Optimizer**: AdamW + ReduceLROnPlateau.
 
 ## Data Notes
 - C-MAPSS rows contain `unit id`, `cycle`, `3 operational settings`, and `21 sensor measurements`
-- FD001 contains one operating condition and one fault mode
-- Feature count after filtering may be lower than 24 because constant channels are removed
+- FD001/FD003 contain one operating condition, while FD002/FD004 contain six operating conditions
+- The model robustly learns across 1 or 2 fault modes by training on all datasets
+- Feature count after filtering may be lower than 24 because globally constant channels are removed
 
 ## Saved Artifacts
 - `models/lstm_rul.pth`: best validation checkpoint
@@ -55,7 +62,7 @@ bash /Users/devariwala/development/no10/run_pipeline.sh
 
 ## Diagnostics
 ```bash
-bash /Users/devariwala/development/no10/test_environment.sh
+bash test_environment.sh
 ```
 
 ## Notes

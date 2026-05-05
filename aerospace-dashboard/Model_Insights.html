@@ -265,45 +265,27 @@
 <div class="space-y-4">
 <div class="flex justify-between items-end border-b border-zinc-800 pb-2">
 <span class="text-[10px] font-bold uppercase text-zinc-500">LPC Temp (T2)</span>
-<span class="text-xs font-black text-white">482.12 K</span>
+<span id="val-sensor-1" class="text-xs font-black text-white">-- K</span>
 </div>
-<div class="h-16 flex items-end gap-1">
-<script>
-                                    for(let i=0; i<20; i++) {
-                                        let h = Math.floor(Math.random() * 40) + 10;
-                                        document.write(`<div class="flex-1 bg-zinc-800" style="height: ${h}px"></div>`);
-                                    }
-                                </script>
+<div id="sensor-bar-1" class="h-16 flex items-end gap-1">
 </div>
 </div>
 <!-- Sensor Row 2 -->
 <div class="space-y-4">
 <div class="flex justify-between items-end border-b border-zinc-800 pb-2">
 <span class="text-[10px] font-bold uppercase text-zinc-500">Fan Speed (N1)</span>
-<span class="text-xs font-black text-white">2,388 RPM</span>
+<span id="val-sensor-2" class="text-xs font-black text-white">-- RPM</span>
 </div>
-<div class="h-16 flex items-end gap-1">
-<script>
-                                    for(let i=0; i<20; i++) {
-                                        let h = Math.floor(Math.random() * 50) + 20;
-                                        document.write(`<div class="flex-1 bg-orange-500/40" style="height: ${h}px"></div>`);
-                                    }
-                                </script>
+<div id="sensor-bar-2" class="h-16 flex items-end gap-1">
 </div>
 </div>
 <!-- Sensor Row 3 -->
 <div class="space-y-4">
 <div class="flex justify-between items-end border-b border-zinc-800 pb-2">
 <span class="text-[10px] font-bold uppercase text-zinc-500">Oil Pressure (P15)</span>
-<span class="text-xs font-black text-white">21.61 PSIA</span>
+<span id="val-sensor-3" class="text-xs font-black text-white">-- PSIA</span>
 </div>
-<div class="h-16 flex items-end gap-1">
-<script>
-                                    for(let i=0; i<20; i++) {
-                                        let h = Math.floor(Math.random() * 30) + 15;
-                                        document.write(`<div class="flex-1 bg-zinc-800" style="height: ${h}px"></div>`);
-                                    }
-                                </script>
+<div id="sensor-bar-3" class="h-16 flex items-end gap-1">
 </div>
 </div>
 </div>
@@ -445,6 +427,39 @@ async function loadInsights() {
         });
       }
     } catch(e) { console.error('Accuracy stats error', e); }
+
+    // Multi-Sensor Trend Correlation (Live Data)
+    try {
+      const histRes = await fetch(`${API}/api/engine-history?engineId=1&dataset=FD001`);
+      const histData = await histRes.json();
+      if (!histData.error && histData.sensors) {
+        const sensors = ['sensor_2', 'sensor_3', 'sensor_4'];
+        const colors = ['bg-zinc-800', 'bg-orange-500/40', 'bg-zinc-800'];
+        const suffixes = [' K', ' RPM', ' PSIA'];
+        
+        sensors.forEach((s, idx) => {
+          const vals = histData.sensors[s];
+          if (vals && vals.length > 0) {
+            const recent = vals.slice(-20);
+            const min = Math.min(...vals);
+            const max = Math.max(...vals);
+            const container = document.getElementById(`sensor-bar-${idx+1}`);
+            const valLabel = document.getElementById(`val-sensor-${idx+1}`);
+            
+            if (container) {
+              container.innerHTML = recent.map(v => {
+                const norm = max === min ? 0.5 : (v - min) / (max - min);
+                const height = Math.max(10, Math.floor(norm * 60));
+                return `<div class="flex-1 ${colors[idx]}" style="height: ${height}px"></div>`;
+              }).join('');
+            }
+            if (valLabel) {
+              valLabel.textContent = recent[recent.length-1].toFixed(2) + suffixes[idx];
+            }
+          }
+        });
+      }
+    } catch(e) { console.error('Sensor trend error', e); }
 
   } catch(e) { console.error('Insights load error', e); }
 }

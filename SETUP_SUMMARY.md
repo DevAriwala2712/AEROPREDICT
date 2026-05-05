@@ -10,27 +10,32 @@
 
 ### Refresh official dataset files
 ```bash
-/Users/devariwala/development/no10/.venv/bin/python /Users/devariwala/development/no10/src/download_data.py
+./.venv/bin/python src/download_data.py
 ```
 
 ### Train the baseline
 ```bash
-/Users/devariwala/development/no10/.venv/bin/python /Users/devariwala/development/no10/src/train.py --dataset FD001
+./.venv/bin/python src/train.py --dataset FD001
 ```
 
 ### Evaluate the saved model
 ```bash
-/Users/devariwala/development/no10/.venv/bin/python /Users/devariwala/development/no10/src/evaluate.py --dataset FD001
+./.venv/bin/python src/evaluate.py --dataset FD001
 ```
 
 ### Full pipeline
 ```bash
-bash /Users/devariwala/development/no10/run_pipeline.sh
+bash run_pipeline.sh
+```
+
+### Launch Interactive Dashboard
+```bash
+./.venv/bin/python src/api_server.py
 ```
 
 ## Diagnostics
 ```bash
-bash /Users/devariwala/development/no10/test_environment.sh
+bash test_environment.sh
 ```
 
 ## Main Behavior

@@ -104,6 +104,27 @@ def _select_feature_columns(
     return [name for name in train_df.columns if name not in {"unit_id", "cycle", "RUL"}]
 
 
+def add_features(df: pd.DataFrame, features: list[str], window: int = 10) -> tuple[pd.DataFrame, list[str]]:
+    df = df.copy()
+    new_features = list(features)
+    
+    # Sensory columns are typically sensor_1 to sensor_21
+    sensor_cols = [c for c in features if c.startswith("sensor_")]
+    
+    for col in sensor_cols:
+        # Rolling mean
+        mean_col = f"{col}_rmean"
+        df[mean_col] = df.groupby("unit_id")[col].transform(lambda x: x.rolling(window, min_periods=1).mean())
+        new_features.append(mean_col)
+        
+        # Rolling std
+        std_col = f"{col}_rstd"
+        df[std_col] = df.groupby("unit_id")[col].transform(lambda x: x.rolling(window, min_periods=1).std().fillna(0))
+        new_features.append(std_col)
+        
+    return df, new_features
+
+
 def prepare_train_data(
     train_df: pd.DataFrame,
     max_rul: int | None = DEFAULT_MAX_RUL,
@@ -114,6 +135,10 @@ def prepare_train_data(
     if max_rul is not None:
         prepared["RUL"] = prepared["RUL"].clip(upper=max_rul)
     feature_columns = _select_feature_columns(prepared, near_constant_threshold=near_constant_threshold)
+    
+    # Add rolling features
+    prepared, feature_columns = add_features(prepared, feature_columns)
+    
     return prepared, feature_columns, "RUL"
 
 
@@ -166,6 +191,9 @@ def prepare_test_samples(
     seq_length: int = 50,
     max_rul: int | None = DEFAULT_MAX_RUL,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    # Ensure we only have base features before adding rolling features
+    base_features = [f for f in features if "_rmean" not in f and "_rstd" not in f]
+    
     last_cycle = test_df.groupby("unit_id")["cycle"].max().rename("max_cycle")
     prepared = test_df.merge(last_cycle, on="unit_id")
     prepared["RUL"] = prepared["max_cycle"] - prepared["cycle"]
@@ -175,6 +203,14 @@ def prepare_test_samples(
         suffixes=("", "_final"),
     )
     prepared["RUL"] = prepared["RUL"] + prepared["RUL_final"]
+    
+    # Add rolling features before splitting into sequences
+    prepared, all_features = add_features(prepared, base_features)
+    
+    # Double check that all_features matches the expected features list length if provided
+    # If the user passed in a list including rolling features, we should ensure the order matches.
+    # Actually, it's safer to just use all_features as calculated.
+    
     if max_rul is not None:
         prepared["RUL"] = prepared["RUL"].clip(upper=max_rul)
 
@@ -183,7 +219,7 @@ def prepare_test_samples(
     unit_ids: list[int] = []
     for unit_id in prepared["unit_id"].unique():
         engine_data = prepared[prepared["unit_id"] == unit_id].sort_values("cycle")
-        values = engine_data[features].to_numpy(dtype=np.float32)
+        values = engine_data[all_features].to_numpy(dtype=np.float32)
         if len(engine_data) < seq_length:
             pad_rows = np.repeat(values[:1], seq_length - len(engine_data), axis=0)
             values = np.vstack([pad_rows, values])

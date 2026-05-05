@@ -41,9 +41,9 @@ def load_checkpoint(path: Path) -> dict:
             "dataset": DEFAULT_DATASET,
             "seq_length": 50,
             "max_rul": 125,
-            "hidden_size": 64,
-            "num_layers": 2,
-            "dropout": 0.2,
+            "hidden_size": 128,
+            "num_layers": 3,
+            "dropout": 0.3,
             "feature_columns": None,
         },
         "metrics": {},
@@ -77,9 +77,9 @@ def main() -> None:
     device = get_device()
     model = LSTMRULPredictor(
         input_size=len(feature_columns),
-        hidden_size=int(config.get("hidden_size", 64)),
+        hidden_size=int(config.get("hidden_size", 128)),
         num_layers=int(config.get("num_layers", 2)),
-        dropout=float(config.get("dropout", 0.2)),
+        dropout=float(config.get("dropout", 0.3)),
     ).to(device)
     model.load_state_dict(checkpoint["state_dict"])
     model.eval()
