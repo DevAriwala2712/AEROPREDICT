@@ -7,8 +7,8 @@
 <link href="/theme.css" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <script defer src="/theme.js"></script>
+<script defer src="/ui_features.js"></script>
  
 <style>
         body { font-family: 'Inter', sans-serif; background-color: #000000; color: #FFFFFF; }
@@ -83,11 +83,11 @@
 </div>
 <div class="flex items-center gap-6">
 <div class="flex items-center gap-2 text-zinc-400">
-<button class="p-2 hover:bg-zinc-900 hover:text-white rounded-lg transition-colors duration-200">
-<span class="material-symbols-outlined text-xl">notifications</span>
+<button class="p-2 hover:bg-zinc-900 hover:text-white rounded-lg transition-colors duration-200" id="insights-notifications-btn" type="button">
+<span class="material-symbols-outlined text-xl" data-icon="notifications">notifications</span>
 </button>
-<button class="p-2 hover:bg-zinc-900 hover:text-white rounded-lg transition-colors duration-200">
-<span class="material-symbols-outlined text-xl">settings</span>
+<button class="p-2 hover:bg-zinc-900 hover:text-white rounded-lg transition-colors duration-200" id="insights-settings-btn" type="button">
+<span class="material-symbols-outlined text-xl" data-icon="settings">settings</span>
 </button>
 </div>
 <div class="flex items-center gap-3 pl-4 border-l border-zinc-800">
@@ -134,7 +134,7 @@
 <span class="material-symbols-outlined text-zinc-600 text-sm">info</span>
 </div>
 <div id="feature-list" class="space-y-6">
-<div class="text-zinc-500 text-xs">Loading features...</div>
+  <div class="text-zinc-500 text-xs">Loading features...</div>
 </div>
 </div>
 <!-- Training Metrics - Loss & Accuracy Graphs -->
@@ -164,13 +164,19 @@
 <p class="text-[10px] text-zinc-500 uppercase tracking-wider">Sequential Model State Vector Analysis</p>
 </div>
 <div class="flex items-center gap-4 text-[10px] font-bold">
-<div class="flex items-center gap-1"><div class="w-2 h-2 bg-orange-500"></div> <span class="text-zinc-400">CRITICAL</span></div>
-<div class="flex items-center gap-1"><div class="w-2 h-2 bg-zinc-600"></div> <span class="text-zinc-400">STABLE</span></div>
+<div class="flex items-center gap-1"><div class="w-2 h-2 bg-cyan-400"></div> <span class="text-zinc-400">LOW</span></div>
+<div class="flex items-center gap-1"><div class="w-2 h-2 bg-orange-500"></div> <span class="text-zinc-400">MEDIUM</span></div>
+<div class="flex items-center gap-1"><div class="w-2 h-2 bg-rose-500"></div> <span class="text-zinc-400">HIGH</span></div>
 </div>
 </div>
-<div id="latent-grid" class="grid grid-cols-16 gap-1 h-64 overflow-hidden">
-  <!-- Dynamic grid items will be injected here -->
-  <div class="col-span-full flex items-center justify-center text-zinc-600 text-xs uppercase tracking-widest h-full">Loading state vector...</div>
+<div class="grid grid-cols-1 gap-4">
+  <div class="h-52 relative border border-zinc-800 bg-zinc-950/60">
+    <canvas id="latent-heatmap-canvas" class="w-full h-full"></canvas>
+    <div id="latent-heatmap-empty" class="hidden absolute inset-0 flex items-center justify-center text-zinc-600 text-xs uppercase tracking-widest">Latent state unavailable</div>
+  </div>
+  <div class="h-20 relative border border-zinc-800 bg-zinc-950/60">
+    <canvas id="latent-trend-canvas" class="w-full h-full"></canvas>
+  </div>
 </div>
 </div>
 <!-- RUL Estimation Accuracy Curve -->
@@ -190,8 +196,8 @@
 <div class="flex items-center justify-between mb-8">
 <h3 class="text-xs font-black uppercase tracking-[0.2em] text-orange-500">Multi-Sensor Trend Correlation</h3>
 <div class="flex gap-4">
-<button class="px-3 py-1 bg-zinc-900 border border-zinc-700 text-[10px] font-bold text-zinc-300 uppercase hover:bg-zinc-800">Export CSV</button>
-<button class="px-3 py-1 bg-orange-500 text-black border border-orange-500 text-[10px] font-bold uppercase">Sync Stream</button>
+<button class="px-3 py-1 bg-zinc-900 border border-zinc-700 text-[10px] font-bold text-zinc-300 uppercase hover:bg-zinc-800" id="insights-export-csv-btn" type="button">Export CSV</button>
+<button class="px-3 py-1 bg-orange-500 text-black border border-orange-500 text-[10px] font-bold uppercase" id="insights-sync-stream-btn" type="button">Sync Stream</button>
 </div>
 </div>
 <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -263,7 +269,245 @@
 </footer>
 </main>
 <script>
-const API = 'http://127.0.0.1:8000';
+const API = (window.AeroPredictUi && typeof window.AeroPredictUi.getApiBase === 'function')
+  ? window.AeroPredictUi.getApiBase()
+  : 'http://127.0.0.1:8000';
+const insightsState = {
+  summary: null,
+  history: [],
+  latentActivations: [],
+  resizeTimer: null,
+  charts: {
+    loss: null,
+    featureImportance: null,
+    accuracy: null
+  }
+};
+
+function showUiToast(message, tone = 'info') {
+  if (window.AeroPredictUi && typeof window.AeroPredictUi.showToast === 'function') {
+    window.AeroPredictUi.showToast(message, tone);
+  }
+}
+
+function exportHistoryAsCsv() {
+  if (!Array.isArray(insightsState.history) || insightsState.history.length === 0) {
+    showUiToast('No training history found to export.', 'warning');
+    return;
+  }
+
+  const rows = [['epoch', 'loss', 'val_rmse']];
+  insightsState.history.forEach((item) => {
+    rows.push([item.epoch, item.loss, item.val_rmse]);
+  });
+
+  const csv = rows
+    .map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `model-insights-history-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  showUiToast('Training history CSV exported.', 'success');
+}
+
+function setButtonBusy(button, isBusy) {
+  if (!button) return;
+  button.disabled = isBusy;
+  button.classList.toggle('opacity-60', isBusy);
+  button.classList.toggle('cursor-not-allowed', isBusy);
+}
+
+function toTitle(value) {
+  return String(value || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function drawFeatureImportanceChart(features, values) {
+  const container = document.getElementById('feature-list');
+  if (!container) return;
+
+  const safeValues = Array.isArray(values) ? values.map((v) => Number(v) || 0) : [];
+  const pairs = (Array.isArray(features) ? features : []).map((f, i) => ({ label: toTitle(f), value: safeValues[i] || 0 }));
+  const maxVal = Math.max(...pairs.map(p => p.value), 0.0001);
+
+  // Show top 10 in original stacked list order (largest first)
+  const sorted = pairs.slice().sort((a,b) => b.value - a.value).slice(0, 20);
+
+  if (sorted.length === 0) {
+    container.innerHTML = '<div class="text-zinc-500 text-xs">Feature importance unavailable</div>';
+    return;
+  }
+
+  container.innerHTML = sorted.map((p) => {
+    const pct = (p.value / maxVal) * 100;
+    return `<div class="space-y-1">
+      <div class="flex justify-between items-center">
+        <div class="text-[10px] font-bold uppercase text-zinc-400">${p.label}</div>
+        <div class="text-[10px] font-bold text-zinc-400">${Math.round(pct)}%</div>
+      </div>
+      <div class="h-2 bg-zinc-900 w-full rounded-sm overflow-hidden">
+        <div class="h-full bg-orange-500" style="width:${Math.max(2, pct)}%"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function colorForActivation(norm) {
+  const t = Math.max(0, Math.min(1, norm));
+  if (t < 0.4) {
+    const q = t / 0.4;
+    const r = Math.round(34 + q * 215);
+    const g = Math.round(211 - q * 96);
+    const b = Math.round(238 - q * 180);
+    return `rgb(${r},${g},${b})`;
+  }
+  if (t < 0.75) {
+    const q = (t - 0.4) / 0.35;
+    const r = 249;
+    const g = Math.round(115 + q * 60);
+    const b = Math.round(22 - q * 10);
+    return `rgb(${r},${g},${b})`;
+  }
+  const q = (t - 0.75) / 0.25;
+  const r = Math.round(249 - q * 37);
+  const g = Math.round(175 - q * 112);
+  const b = Math.round(12 + q * 76);
+  return `rgb(${r},${g},${b})`;
+}
+
+function drawLatentHeatmap(activations) {
+  const heatmapCanvas = document.getElementById('latent-heatmap-canvas');
+  const trendCanvas = document.getElementById('latent-trend-canvas');
+  const emptyState = document.getElementById('latent-heatmap-empty');
+  if (!heatmapCanvas || !trendCanvas) return;
+
+  const matrix = Array.isArray(activations) ? activations : [];
+  const rows = matrix.length;
+  const cols = rows > 0 && Array.isArray(matrix[0]) ? matrix[0].length : 0;
+  if (rows === 0 || cols === 0) {
+    if (emptyState) emptyState.classList.remove('hidden');
+    return;
+  }
+  if (emptyState) emptyState.classList.add('hidden');
+
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+  const heatRect = heatmapCanvas.getBoundingClientRect();
+  heatmapCanvas.width = Math.floor(heatRect.width * dpr);
+  heatmapCanvas.height = Math.floor(heatRect.height * dpr);
+  const hctx = heatmapCanvas.getContext('2d');
+  if (!hctx) return;
+  hctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  hctx.clearRect(0, 0, heatRect.width, heatRect.height);
+
+  const plotX = 34;
+  const plotY = 10;
+  const plotW = Math.max(10, heatRect.width - 44);
+  const plotH = Math.max(10, heatRect.height - 22);
+  const cellW = plotW / cols;
+  const cellH = plotH / rows;
+  const flat = matrix.flat().map((v) => Math.abs(Number(v) || 0));
+  const maxAct = Math.max(...flat, 0.00001);
+
+  for (let r = 0; r < rows; r += 1) {
+    for (let c = 0; c < cols; c += 1) {
+      const raw = Math.abs(Number(matrix[r][c]) || 0);
+      const n = raw / maxAct;
+      hctx.fillStyle = colorForActivation(n);
+      hctx.fillRect(plotX + c * cellW, plotY + r * cellH, Math.ceil(cellW), Math.ceil(cellH));
+    }
+  }
+
+  hctx.strokeStyle = 'rgba(161,161,170,0.35)';
+  hctx.lineWidth = 1;
+  hctx.strokeRect(plotX, plotY, plotW, plotH);
+  hctx.fillStyle = '#a1a1aa';
+  hctx.font = '10px Inter, sans-serif';
+  hctx.fillText('t1', plotX, heatRect.height - 4);
+  hctx.fillText(`t${rows}`, plotX + plotW - 18, heatRect.height - 4);
+  hctx.save();
+  hctx.translate(10, plotY + plotH / 2);
+  hctx.rotate(-Math.PI / 2);
+  hctx.fillText('latent unit index', 0, 0);
+  hctx.restore();
+
+  const trendRect = trendCanvas.getBoundingClientRect();
+  trendCanvas.width = Math.floor(trendRect.width * dpr);
+  trendCanvas.height = Math.floor(trendRect.height * dpr);
+  const tctx = trendCanvas.getContext('2d');
+  if (!tctx) return;
+  tctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  tctx.clearRect(0, 0, trendRect.width, trendRect.height);
+
+  const trend = matrix.map((row) => row.reduce((acc, v) => acc + Math.abs(Number(v) || 0), 0) / cols);
+  const maxTrend = Math.max(...trend, 0.00001);
+  const minTrend = Math.min(...trend);
+  const tx = 8;
+  const ty = 8;
+  const tw = Math.max(10, trendRect.width - 16);
+  const th = Math.max(10, trendRect.height - 16);
+
+  tctx.strokeStyle = 'rgba(113,113,122,0.4)';
+  tctx.lineWidth = 1;
+  tctx.strokeRect(tx, ty, tw, th);
+
+  tctx.beginPath();
+  trend.forEach((v, i) => {
+    const px = tx + (i / Math.max(trend.length - 1, 1)) * tw;
+    const pn = (v - minTrend) / Math.max(maxTrend - minTrend, 0.00001);
+    const py = ty + th - pn * th;
+    if (i === 0) tctx.moveTo(px, py);
+    else tctx.lineTo(px, py);
+  });
+  tctx.strokeStyle = '#fb923c';
+  tctx.lineWidth = 1.8;
+  tctx.stroke();
+
+  tctx.fillStyle = '#a1a1aa';
+  tctx.font = '10px Inter, sans-serif';
+  tctx.fillText('Mean |activation| by timestep', tx + 4, ty + 12);
+}
+
+function initInsightsButtons() {
+  const exportBtn = document.getElementById('insights-export-csv-btn');
+  const syncBtn = document.getElementById('insights-sync-stream-btn');
+
+  if (exportBtn && exportBtn.dataset.wired !== 'true') {
+    exportBtn.dataset.wired = 'true';
+    exportBtn.addEventListener('click', exportHistoryAsCsv);
+  }
+
+  if (syncBtn && syncBtn.dataset.wired !== 'true') {
+    syncBtn.dataset.wired = 'true';
+    syncBtn.addEventListener('click', async () => {
+      setButtonBusy(syncBtn, true);
+      showUiToast('Syncing model insight stream...', 'info');
+      try {
+        const ok = await loadInsights();
+        if (ok) {
+          showUiToast('Model insight stream synced.', 'success');
+          window.dispatchEvent(new CustomEvent('aeropredict:sync-stream'));
+        } else {
+          showUiToast('Sync failed. API may be offline.', 'danger');
+        }
+      } catch (error) {
+        console.error('Sync failed', error);
+        showUiToast('Sync failed. API may be offline.', 'danger');
+      } finally {
+        setButtonBusy(syncBtn, false);
+      }
+    });
+  }
+}
 
 async function loadInsights() {
   try {
@@ -273,6 +517,8 @@ async function loadInsights() {
     ]);
     const summary = await sumRes.json();
     const history = await histRes.json();
+    insightsState.summary = summary;
+    insightsState.history = Array.isArray(history) ? history : [];
 
     // Update hero stats
     const rmse = summary.metrics.bestValRmse;
@@ -284,7 +530,10 @@ async function loadInsights() {
     // Rewrite training chart with real data
     const canvas = document.getElementById('loss-canvas');
     if (canvas && history.length > 0) {
-      new Chart(canvas, {
+      if (insightsState.charts.loss) {
+        insightsState.charts.loss.destroy();
+      }
+      insightsState.charts.loss = new Chart(canvas, {
         type:'line',
         data:{
           labels: history.map(h=>h.epoch),
@@ -302,56 +551,27 @@ async function loadInsights() {
     try {
       const explainRes = await fetch(`${API}/api/explain`);
       const explainData = await explainRes.json();
-      const featureContainer = document.getElementById('feature-list');
-      if (featureContainer && !explainData.error) {
-        const features = explainData.features || [];
-        const values = explainData.values || [];
-        const maxVal = Math.max(...values, 0.0001);
-        
-        featureContainer.innerHTML = features.map((f, i) => {
-          const pct = (values[i] / maxVal) * 100;
-          return `<div class="space-y-1">
-            <div class="flex justify-between text-[10px] font-bold uppercase text-zinc-400">
-              <span>${f}</span>
-              <span>${pct.toFixed(1)}%</span>
-            </div>
-            <div class="h-2 bg-zinc-900 w-full">
-              <div class="h-full bg-orange-500" style="width:${Math.max(2, pct)}%"></div>
-            </div>
-          </div>`;
-        }).slice(0, 10).join(''); // Show top 10
+      if (!explainData.error) {
+        drawFeatureImportanceChart(explainData.features || [], explainData.values || []);
       }
     } catch(e) {
       console.warn('Explain endpoint failed, falling back to basic list');
+      drawFeatureImportanceChart([], []);
     }
 
-    // Latent State Grid
+    // Latent state charts (heatmap + trend)
     try {
       const latentRes = await fetch(`${API}/api/latent-state`);
       const latentData = await latentRes.json();
-      const grid = document.getElementById('latent-grid');
-      if (grid && !latentData.error) {
-        // Sample activations: only show first 128 elements (16x8) from the 50x64 total
-        // to fit the visual grid style, or show a compressed version.
-        // Let's take the last cycle's hidden state (64 units) and repeat it 2 times
-        // or just show a slice of the 50x64.
-        const acts = latentData.activations; // 50x64
-        const flatActs = acts.flat();
-        const maxAct = Math.max(...flatActs.map(Math.abs), 0.0001);
-        
-        // We want to fill 128 cells (16x8)
-        grid.innerHTML = '';
-        for(let i=0; i<128; i++) {
-          const rawVal = Math.abs(flatActs[i % flatActs.length]);
-          const val = rawVal / maxAct; // Normalize to 0-1
-          const opacity = val > 0.7 ? 'bg-orange-500' : (val > 0.3 ? 'bg-orange-500/50' : (val > 0.1 ? 'bg-orange-500/20' : 'bg-zinc-900'));
-          const div = document.createElement('div');
-          div.className = `${opacity} border border-white/5 rounded-[1px]`;
-          div.title = `Unit Activation: ${rawVal.toFixed(3)}`;
-          grid.appendChild(div);
-        }
+      if (!latentData.error) {
+        insightsState.latentActivations = Array.isArray(latentData.activations) ? latentData.activations : [];
+        drawLatentHeatmap(insightsState.latentActivations);
       }
-    } catch(e) { console.error('Latent state error', e); }
+    } catch(e) {
+      console.error('Latent state error', e);
+      insightsState.latentActivations = [];
+      drawLatentHeatmap([]);
+    }
 
     // Accuracy Stats Chart
     try {
@@ -359,7 +579,10 @@ async function loadInsights() {
       const accData = await accRes.json();
       const accCanvas = document.getElementById('accuracy-canvas');
       if (accCanvas && accData.length > 0) {
-        new Chart(accCanvas, {
+        if (insightsState.charts.accuracy) {
+          insightsState.charts.accuracy.destroy();
+        }
+        insightsState.charts.accuracy = new Chart(accCanvas, {
           type: 'bar',
           data: {
             labels: accData.map(d => d.label),
@@ -380,9 +603,22 @@ async function loadInsights() {
       }
     } catch(e) { console.error('Accuracy stats error', e); }
 
-  } catch(e) { console.error('Insights load error', e); }
+    return true;
+  } catch(e) {
+    console.error('Insights load error', e);
+    return false;
+  }
 }
 
 window.addEventListener('DOMContentLoaded', loadInsights);
+window.addEventListener('DOMContentLoaded', initInsightsButtons);
+window.addEventListener('resize', () => {
+  if (insightsState.resizeTimer) {
+    window.clearTimeout(insightsState.resizeTimer);
+  }
+  insightsState.resizeTimer = window.setTimeout(() => {
+    drawLatentHeatmap(insightsState.latentActivations || []);
+  }, 180);
+});
 </script>
 </body></html>

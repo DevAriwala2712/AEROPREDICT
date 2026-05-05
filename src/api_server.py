@@ -1075,37 +1075,89 @@ def static_pages(filename: str) -> Any:
 
 @app.get("/api/explain")
 def api_explain() -> Any:
-    # Use first 50 samples for speed
-    if not HAS_CAPTUM or IntegratedGradients is None or not HAS_TORCH or torch is None or not service.available:
-        return jsonify({"error": "Captum not installed or model unavailable"}), 400
-    
-    X_test_tensor = service._test_cache.get("X_test_tensor")
-    if X_test_tensor is None or service.model is None:
-        return jsonify({"error": "Test data or model not available"}), 500
-    
-    try:
-        samples = X_test_tensor[:50].requires_grad_()
-        
-        ig = IntegratedGradients(service.model)  # type: ignore
-        baseline = torch.zeros_like(samples)
-        attributions, _ = ig.attribute(samples, baseline, return_convergence_delta=True)
-        # Average over batch and sequence dimension
-        attr_mean = attributions.mean(dim=0).mean(dim=0).detach().cpu().numpy()
-        
-        feature_columns = service.config.get("feature_columns") or []
-        if len(feature_columns) != len(attr_mean):
-            return jsonify({"error": "Feature mismatch"}), 500
-            
-        importance = {feat: float(abs(val)) for feat, val in zip(feature_columns, attr_mean)}
-        
-        # Sort by importance and format properly
-        sorted_importance = sorted(importance.items(), key=lambda x: x[1], reverse=True)
+    def _format_sorted(importance_map: dict[str, float], method: str) -> Any:
+        sorted_importance = sorted(importance_map.items(), key=lambda x: x[1], reverse=True)
         return jsonify({
-            "features": [i[0] for i in sorted_importance],
-            "values": [i[1] for i in sorted_importance]
+            "features": [item[0] for item in sorted_importance],
+            "values": [item[1] for item in sorted_importance],
+            "method": method,
         })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+
+    def _fallback_importance() -> Any:
+        cache = service._test_cache
+        # prefer explicit feature list from cache/config, but infer from prepared data if missing
+        feature_columns = cache.get("feature_columns") or service.config.get("feature_columns") or []
+        prepared_train_df = cache.get("prepared_train_df")
+        prepared_test_df = cache.get("prepared_test_df")
+
+        # If no explicit features provided, infer from prepared_train_df or prepared_test_df
+        df_for_infer = prepared_train_df if prepared_train_df is not None else prepared_test_df
+        if (not feature_columns or len(feature_columns) == 0) and df_for_infer is not None:
+            # infer numeric feature columns excluding standard meta columns
+            meta = {"RUL", "unit_id", "cycle", "max_cycle", "RUL_final"}
+            feature_columns = [c for c in df_for_infer.columns if c not in meta]
+
+        if df_for_infer is None or "RUL" not in df_for_infer.columns or len(feature_columns) == 0:
+            return jsonify({"error": "Feature importance data unavailable"}), 503
+
+        try:
+            target = df_for_infer["RUL"].to_numpy(dtype=np.float64)
+            if target.size == 0:
+                return jsonify({"error": "No rows available for fallback importance"}), 503
+
+            importance: dict[str, float] = {}
+            target_std = float(np.std(target))
+            for feature in feature_columns:
+                if feature not in df_for_infer.columns:
+                    continue
+                col = df_for_infer[feature].to_numpy(dtype=np.float64)
+                if col.size != target.size:
+                    # If sizes mismatch, try to broadcast by truncation/expansion conservatively
+                    min_len = min(col.size, target.size)
+                    if min_len == 0:
+                        continue
+                    col = col[:min_len]
+                    tgt = target[:min_len]
+                else:
+                    tgt = target
+
+                col_std = float(np.std(col))
+                if col_std <= 1e-12 or target_std <= 1e-12:
+                    score = 0.0
+                else:
+                    corr = float(np.corrcoef(col, tgt)[0, 1])
+                    score = abs(corr) if np.isfinite(corr) else 0.0
+                importance[feature] = score
+
+            if not importance:
+                return jsonify({"error": "Unable to compute fallback feature importance"}), 503
+
+            return _format_sorted(importance, "correlation_fallback")
+        except Exception as exc:
+            return jsonify({"error": f"fallback failed: {exc}"}), 500
+
+    if HAS_CAPTUM and IntegratedGradients is not None and HAS_TORCH and torch is not None and service.available:
+        X_test_tensor = service._test_cache.get("X_test_tensor")
+        if X_test_tensor is None or service.model is None:
+            return _fallback_importance()
+
+        try:
+            samples = X_test_tensor[:50].requires_grad_()
+            ig = IntegratedGradients(service.model)  # type: ignore
+            baseline = torch.zeros_like(samples)
+            attributions, _ = ig.attribute(samples, baseline, return_convergence_delta=True)
+            attr_mean = attributions.mean(dim=0).mean(dim=0).detach().cpu().numpy()
+
+            feature_columns = service.config.get("feature_columns") or []
+            if len(feature_columns) != len(attr_mean):
+                return _fallback_importance()
+
+            importance = {feat: float(abs(val)) for feat, val in zip(feature_columns, attr_mean)}
+            return _format_sorted(importance, "integrated_gradients")
+        except Exception:
+            return _fallback_importance()
+
+    return _fallback_importance()
 
 
 @app.get("/api/latent-state")

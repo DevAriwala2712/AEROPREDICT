@@ -44,37 +44,39 @@ It contains:
 
 Fleet overview, KPI cards, scatter/error charts, and high-level model summary.
 
-![Main Dashboard](docs/dashboard-shots/main-dashboard.png)
+[![Main Dashboard](docs/dashboard-shots/main-dashboard.png)](aerospace-dashboard/Main_Dashboard.html)
 
 ### Live Prediction Panel
 
 Dataset-aware prediction workflow with engine selector, risk display, uncertainty, and sensor/rul history charts.
 
-![Live Prediction Panel](docs/dashboard-shots/live-prediction.png)
+[![Live Prediction Panel](docs/dashboard-shots/live-prediction.png)](aerospace-dashboard/Live_Prediction_Panel.html)
 
 ### Model Insights
 
 Visual diagnostics for model behavior and learning progress.
 
-![Model Insights](docs/dashboard-shots/model-insights.png)
+[![Model Insights](docs/dashboard-shots/model-insights.png)](aerospace-dashboard/Model_Insights.html)
 
 ### Model Details and Architecture
 
 Model internals, architecture context, and technical interpretation.
 
-![Model Details](docs/dashboard-shots/model-details.png)
+[![Model Details](docs/dashboard-shots/model-details.png)](aerospace-dashboard/Model_Details_Architecture.html)
 
 ### Data Explorer
 
 Telemetry browsing and dataset exploration views.
 
-![Data Explorer](docs/dashboard-shots/data-explorer.png)
+[![Data Explorer](docs/dashboard-shots/data-explorer.png)](aerospace-dashboard/Data_Explorer.html)
 
 ### API Deployment Demo
 
 Interactive API request/response presentation.
 
-![API Demo](docs/dashboard-shots/api-demo.png)
+[![API Demo](docs/dashboard-shots/api-demo.png)](aerospace-dashboard/API_Deployment_Demo.html)
+
+> To update these screenshots, replace the image files in `docs/dashboard-shots/` and then update their captions here if needed.
 
 ## Data and Feature Pipeline
 
