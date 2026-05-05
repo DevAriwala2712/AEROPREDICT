@@ -1,4 +1,17 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -x "$SCRIPT_DIR/.venv/Scripts/python.exe" ]]; then
+    PYTHON_BIN="$SCRIPT_DIR/.venv/Scripts/python.exe"
+elif [[ -x "$SCRIPT_DIR/.venv/bin/python" ]]; then
+    PYTHON_BIN="$SCRIPT_DIR/.venv/bin/python"
+else
+    PYTHON_BIN="python"
+fi
+
+cd "$SCRIPT_DIR"
 
 echo "================================"
 echo "System Diagnostics & Testing"
@@ -74,7 +87,7 @@ fi
 
 echo ""
 echo "7. Quick end-to-end evaluation..."
-$PYTHON_BIN src/evaluate.py --dataset FD001 --mc-samples 10
+"$PYTHON_BIN" src/evaluate.py --dataset FD001 --mc-samples 10
 
 echo ""
 echo "================================"

@@ -1,0 +1,24 @@
+{
+  "name": "aeropredict",
+  "version": "1.0.0",
+  "description": "AeroPredict is a predictive maintenance dashboard for aircraft engines built around the NASA C-MAPSS Remaining Useful Life (RUL) benchmark. It combines a PyTorch LSTM model, a Flask API, and a set of interactive dashboard pages to inspect training quality, explore telemetry, and test live predictions.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DevAriwala2712/AEROPREDICT.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/DevAriwala2712/AEROPREDICT/issues"
+  },
+  "homepage": "https://github.com/DevAriwala2712/AEROPREDICT#readme"
+}

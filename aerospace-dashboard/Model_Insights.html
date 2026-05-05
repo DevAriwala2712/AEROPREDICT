@@ -3,10 +3,23 @@
 <html class="dark" lang="en"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script onerror="window.__tailwindCdnFailed=true" src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="/theme.css" rel="stylesheet"/>
+<script defer src="/theme.js"></script>
+<script defer src="/ui_features.js"></script>
+<script>
+      window.tailwind = window.tailwind || {};
+      if (window.__tailwindCdnFailed && !document.querySelector('link[data-tailwind-fallback="true"]')) {
+        const fallbackCss = document.createElement("link");
+        fallbackCss.rel = "stylesheet";
+        fallbackCss.href = "https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css";
+        fallbackCss.setAttribute("data-tailwind-fallback", "true");
+        document.head.appendChild(fallbackCss);
+      }
+</script>
 <script id="tailwind-config">
       tailwind.config = {
         darkMode: "class",
@@ -222,6 +235,9 @@
     <canvas id="loss-canvas"></canvas>
   </div>
 </div>
+<div class="relative h-64 w-full">
+<canvas id="loss-canvas"></canvas>
+</div>
 <!-- LSTM Latent State Degradation -->
 <div class="col-span-12 lg:col-span-7 bg-zinc-950 border border-zinc-800 p-6">
 <div class="flex items-center justify-between mb-6">
@@ -311,16 +327,48 @@
 </footer>
 </main>
 <script>
-const API = 'http://127.0.0.1:8000';
+const SETTINGS_KEY = 'aeropredict-ui-settings';
+const DEFAULT_API = 'http://127.0.0.1:8000';
+let API = getConfiguredApiBase();
+
+function getConfiguredApiBase() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    const configured = String(parsed.apiBase || '').trim().replace(/\/$/, '');
+    return configured || DEFAULT_API;
+  } catch {
+    return DEFAULT_API;
+  }
+}
+
+function renderBars(containerId, values, colorClass) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = values.map((value) => {
+    const height = Math.max(8, Math.min(62, value));
+    return `<div class="flex-1 ${colorClass}" style="height:${height}px"></div>`;
+  }).join('');
+}
+
+function normalizeSeries(values, minHeight = 12, maxHeight = 62) {
+  if (!values.length) return [];
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  if (Math.abs(max - min) < 1e-8) return values.map(() => (minHeight + maxHeight) / 2);
+  return values.map((value) => minHeight + ((value - min) / (max - min)) * (maxHeight - minHeight));
+}
 
 async function loadInsights() {
   try {
-    const [sumRes, histRes] = await Promise.all([
+    const [sumRes, histRes, predRes] = await Promise.all([
       fetch(`${API}/api/summary`),
-      fetch(`${API}/api/history`)
+      fetch(`${API}/api/history`),
+      fetch(`${API}/api/all-predictions`)
     ]);
     const summary = await sumRes.json();
     const history = await histRes.json();
+    const predictionsPayload = await predRes.json();
+    const predictions = predictionsPayload.engines || [];
 
     // Update hero stats
     const rmse = summary.metrics.bestValRmse;
@@ -465,5 +513,9 @@ async function loadInsights() {
 }
 
 window.addEventListener('DOMContentLoaded', loadInsights);
+window.addEventListener('aeropredict:settings-updated', () => {
+  API = getConfiguredApiBase();
+  loadInsights();
+});
 </script>
 </body></html>

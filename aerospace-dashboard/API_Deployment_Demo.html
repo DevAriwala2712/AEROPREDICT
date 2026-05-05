@@ -4,10 +4,23 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>AeroPredict AI - API Demo</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script onerror="window.__tailwindCdnFailed=true" src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="/theme.css" rel="stylesheet"/>
+<script defer src="/theme.js"></script>
+<script defer src="/ui_features.js"></script>
+<script>
+        window.tailwind = window.tailwind || {};
+        if (window.__tailwindCdnFailed && !document.querySelector('link[data-tailwind-fallback="true"]')) {
+            const fallbackCss = document.createElement("link");
+            fallbackCss.rel = "stylesheet";
+            fallbackCss.href = "https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css";
+            fallbackCss.setAttribute("data-tailwind-fallback", "true");
+            document.head.appendChild(fallbackCss);
+        }
+</script>
 <style>
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
@@ -168,8 +181,8 @@
 <h2 class="text-3xl font-extrabold tracking-tight text-white mb-2">API Deployment Playground</h2>
 <p class="text-zinc-500 max-w-2xl">Test the AeroPredict engine integration. Send raw sensor data streams to the inference endpoint and receive remaining useful life (RUL) predictions in real-time.</p>
 </div>
-<div class="flex items-center gap-4 bg-zinc-900 p-1 rounded-lg border border-zinc-800">
-<button class="px-4 py-2 bg-orange-500 text-black font-bold text-sm rounded shadow-lg shadow-orange-500/20 flex items-center gap-2 hover:bg-orange-400 transition-all">
+<div id="api-demo-action-row" class="flex items-center gap-4 bg-zinc-900 p-1 rounded-lg border border-zinc-800">
+<button id="api-demo-send-btn" onclick="window.runApiDemoRequest && window.runApiDemoRequest()" class="px-4 py-2 bg-orange-500 text-black font-bold text-sm rounded shadow-lg shadow-orange-500/20 flex items-center gap-2 hover:bg-orange-400 transition-all">
 <span class="material-symbols-outlined text-sm" data-icon="send">send</span>
                             Send Request
                         </button>
@@ -232,7 +245,7 @@
 </div>
 </div>
 <div class="p-6 code-font text-sm leading-relaxed overflow-auto max-h-[500px]">
-<pre class="text-zinc-400">{
+<pre id="api-demo-request-block" class="text-zinc-400">{
   <span class="text-orange-500">"engine_id"</span>: <span class="text-white">"AE-7700-X1"</span>,
   <span class="text-orange-500">"timestamp"</span>: <span class="text-white">"2024-05-20T14:30:01.44Z"</span>,
   <span class="text-orange-500">"sensor_data"</span>: {
@@ -256,12 +269,12 @@
 <div class="flex flex-col border border-zinc-800 rounded-xl overflow-hidden bg-zinc-950">
 <div class="bg-zinc-900 px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
 <div class="flex items-center gap-2">
-<span class="text-xs font-bold text-green-500 uppercase tracking-widest">200 OK</span>
-<span class="text-[10px] text-zinc-500 ml-2">Response Time: 12.4ms</span>
+<span id="api-demo-status-badge" class="text-xs font-bold text-green-500 uppercase tracking-widest">200 OK</span>
+<span id="api-demo-response-time" class="text-[10px] text-zinc-500 ml-2">Response Time: 12.4ms</span>
 </div>
 </div>
 <div class="p-6 code-font text-sm leading-relaxed overflow-auto max-h-[500px]">
-<pre class="text-zinc-400">{
+<pre id="api-demo-response-block" class="text-zinc-400">{
   <span class="text-orange-500">"status"</span>: <span class="text-white">"success"</span>,
   <span class="text-orange-500">"prediction"</span>: {
     <span class="text-orange-500">"predicted_rul"</span>: <span class="text-orange-500 font-bold">142</span>,
@@ -330,4 +343,249 @@
 </footer>
 </main>
 </div>
+<script>
+(() => {
+    const DEFAULT_API_BASE = 'http://127.0.0.1:8000';
+
+    function getApiBase() {
+        if (window.AeroPredictUi && typeof window.AeroPredictUi.getApiBase === 'function') {
+            return window.AeroPredictUi.getApiBase();
+        }
+        return DEFAULT_API_BASE;
+    }
+
+    function prettyJson(value) {
+        return JSON.stringify(value, null, 2);
+    }
+
+    function getElements() {
+        const actionRow = document.getElementById('api-demo-action-row');
+        const sendButton = document.getElementById('api-demo-send-btn');
+        return {
+            actionRow,
+            sendButton,
+            requestBlock: document.getElementById('api-demo-request-block'),
+            responseBlock: document.getElementById('api-demo-response-block'),
+            responseTime: document.getElementById('api-demo-response-time'),
+            statusBadge: document.getElementById('api-demo-status-badge'),
+        };
+    }
+
+    function ensureEngineSelect(actionRow, sendButton) {
+        if (!actionRow || !sendButton) return null;
+        let select = actionRow.querySelector('#api-demo-engine-select');
+        if (select) return select;
+
+        select = document.createElement('select');
+        select.id = 'api-demo-engine-select';
+        select.className = 'bg-zinc-950 border border-zinc-700 text-zinc-300 text-xs px-3 py-2 rounded-md outline-none focus:ring-1 focus:ring-orange-500 min-w-[170px]';
+        select.innerHTML = '<option value="">Loading engines...</option>';
+        actionRow.insertBefore(select, sendButton);
+        return select;
+    }
+
+    function setStatus(statusBadge, responseTime, statusCode, elapsedMs) {
+        if (responseTime && Number.isFinite(elapsedMs)) {
+            responseTime.textContent = `Response Time: ${elapsedMs.toFixed(1)}ms`;
+        }
+
+        if (!statusBadge) return;
+        const isOk = statusCode >= 200 && statusCode < 300;
+        statusBadge.textContent = isOk ? `${statusCode} OK` : `${statusCode} ERROR`;
+        statusBadge.className = isOk
+            ? 'text-xs font-bold text-green-500 uppercase tracking-widest'
+            : 'text-xs font-bold text-red-500 uppercase tracking-widest';
+    }
+
+    function flashSendButtonState(button, mode) {
+        if (!button) return;
+
+        const originalHtml = button.dataset.originalHtml || button.innerHTML;
+        if (!button.dataset.originalHtml) {
+            button.dataset.originalHtml = originalHtml;
+        }
+
+        if (mode === 'loading') {
+            button.innerHTML = '<span class="material-symbols-outlined text-sm">autorenew</span> Sending...';
+            button.classList.add('opacity-80');
+            return;
+        }
+
+        button.classList.remove('opacity-80');
+
+        if (mode === 'success') {
+            button.innerHTML = '<span class="material-symbols-outlined text-sm">check_circle</span> Sent';
+            button.classList.remove('bg-orange-500', 'hover:bg-orange-400', 'text-black');
+            button.classList.add('bg-emerald-500', 'text-white');
+            window.setTimeout(() => {
+                button.classList.remove('bg-emerald-500', 'text-white');
+                button.classList.add('bg-orange-500', 'hover:bg-orange-400', 'text-black');
+                button.innerHTML = originalHtml;
+            }, 1400);
+            return;
+        }
+
+        if (mode === 'error') {
+            button.innerHTML = '<span class="material-symbols-outlined text-sm">error</span> Failed';
+            button.classList.remove('bg-orange-500', 'hover:bg-orange-400', 'text-black');
+            button.classList.add('bg-red-600', 'text-white');
+            window.setTimeout(() => {
+                button.classList.remove('bg-red-600', 'text-white');
+                button.classList.add('bg-orange-500', 'hover:bg-orange-400', 'text-black');
+                button.innerHTML = originalHtml;
+            }, 1600);
+        }
+    }
+
+    async function fetchJson(url) {
+        const response = await fetch(url, { headers: { Accept: 'application/json' } });
+        let payload;
+        try {
+            payload = await response.json();
+        } catch {
+            payload = { error: `Non-JSON response from ${url}` };
+        }
+
+        if (!response.ok) {
+            const message = payload && payload.error ? payload.error : `Request failed (${response.status})`;
+            const error = new Error(message);
+            error.status = response.status;
+            error.payload = payload;
+            throw error;
+        }
+
+        return payload;
+    }
+
+    function setRequestPreview(requestBlock, apiBase, engineId) {
+        if (!requestBlock) return;
+        requestBlock.textContent = prettyJson({
+            method: 'GET',
+            url: `${apiBase}/api/sample-prediction?engineId=${engineId}`,
+            headers: { Accept: 'application/json' },
+        });
+    }
+
+    async function loadEngineOptions(select, responseBlock, statusBadge, responseTime) {
+        const apiBase = getApiBase();
+        try {
+            const engineIds = await fetchJson(`${apiBase}/api/engine-ids`);
+            if (!Array.isArray(engineIds) || engineIds.length === 0) {
+                throw new Error('No engine IDs returned by API.');
+            }
+
+            select.innerHTML = engineIds
+                .map((engineId) => `<option value="${engineId}">Engine ${String(engineId).padStart(3, '0')}</option>`)
+                .join('');
+            setStatus(statusBadge, responseTime, 200, 0);
+            return true;
+        } catch (error) {
+            select.innerHTML = '<option value="">No engines available</option>';
+            if (responseBlock) {
+                responseBlock.textContent = prettyJson({
+                    status: 'error',
+                    message: error.message,
+                    hint: 'Verify API server is running and API base URL is correct in Settings.',
+                });
+            }
+            setStatus(statusBadge, responseTime, Number(error.status || 500), 0);
+            return false;
+        }
+    }
+
+    async function sendDemoRequest(elements, select) {
+        const apiBase = getApiBase();
+        const engineId = select.value || select.options[0]?.value;
+        if (!engineId) {
+            throw new Error('Select a valid engine before sending a request.');
+        }
+
+        const { requestBlock, responseBlock, responseTime, statusBadge } = elements;
+        setRequestPreview(requestBlock, apiBase, engineId);
+
+        const started = performance.now();
+        const [summary, prediction] = await Promise.all([
+            fetchJson(`${apiBase}/api/summary`),
+            fetchJson(`${apiBase}/api/sample-prediction?engineId=${engineId}`),
+        ]);
+        const elapsed = performance.now() - started;
+
+        if (responseBlock) {
+            responseBlock.textContent = prettyJson({
+                status: 'success',
+                requestedEngineId: Number(engineId),
+                responseTimeMs: Number(elapsed.toFixed(1)),
+                model: {
+                    dataset: summary.dataset,
+                    testRmse: summary.metrics?.testRmse,
+                    testMae: summary.metrics?.testMae,
+                    bestEpoch: summary.metrics?.bestEpoch,
+                },
+                prediction,
+            });
+        }
+
+        setStatus(statusBadge, responseTime, 200, elapsed);
+    }
+
+    function initApiDemo() {
+        const elements = getElements();
+        if (!elements.actionRow || !elements.sendButton) return;
+
+        const select = ensureEngineSelect(elements.actionRow, elements.sendButton);
+        if (!select) return;
+
+        let busy = false;
+        const run = async () => {
+            if (busy) return;
+            busy = true;
+            elements.sendButton.disabled = true;
+            elements.sendButton.classList.add('opacity-70', 'cursor-not-allowed');
+            flashSendButtonState(elements.sendButton, 'loading');
+            try {
+                await sendDemoRequest(elements, select);
+                flashSendButtonState(elements.sendButton, 'success');
+                if (window.AeroPredictUi && typeof window.AeroPredictUi.showToast === 'function') {
+                    window.AeroPredictUi.showToast('API request completed successfully.', 'success');
+                }
+            } catch (error) {
+                if (elements.responseBlock) {
+                    elements.responseBlock.textContent = prettyJson({
+                        status: 'error',
+                        message: error.message,
+                    });
+                }
+                setStatus(elements.statusBadge, elements.responseTime, Number(error.status || 500), 0);
+                flashSendButtonState(elements.sendButton, 'error');
+                if (window.AeroPredictUi && typeof window.AeroPredictUi.showToast === 'function') {
+                    window.AeroPredictUi.showToast('API request failed. Check server or settings.', 'danger', true);
+                }
+            } finally {
+                elements.sendButton.disabled = false;
+                elements.sendButton.classList.remove('opacity-70', 'cursor-not-allowed');
+                busy = false;
+            }
+        };
+
+        elements.sendButton.addEventListener('click', run);
+        elements.sendButton.onclick = run;
+        window.runApiDemoRequest = run;
+        window.addEventListener('aeropredict:settings-updated', () => {
+            loadEngineOptions(select, elements.responseBlock, elements.statusBadge, elements.responseTime).then((ok) => {
+                if (ok) run();
+            });
+        });
+
+        loadEngineOptions(select, elements.responseBlock, elements.statusBadge, elements.responseTime).then((ok) => {
+            if (ok) run();
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initApiDemo, { once: true });
+    } else {
+        initApiDemo();
+    }
+})();
+</script>
 </body></html>

@@ -4,10 +4,23 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>AERO-NAV | Data Explorer</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script onerror="window.__tailwindCdnFailed=true" src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="/theme.css" rel="stylesheet"/>
+<script defer src="/theme.js"></script>
+<script defer src="/ui_features.js"></script>
+<script>
+        window.tailwind = window.tailwind || {};
+        if (window.__tailwindCdnFailed && !document.querySelector('link[data-tailwind-fallback="true"]')) {
+            const fallbackCss = document.createElement("link");
+            fallbackCss.rel = "stylesheet";
+            fallbackCss.href = "https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css";
+            fallbackCss.setAttribute("data-tailwind-fallback", "true");
+            document.head.appendChild(fallbackCss);
+        }
+</script>
 <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
@@ -393,4 +406,185 @@
 </div>
 </main>
 </div>
+<script>
+const SETTINGS_KEY = 'aeropredict-ui-settings';
+const DEFAULT_API = 'http://127.0.0.1:8000';
+let EXPLORER_API = getConfiguredApiBase();
+
+function getConfiguredApiBase() {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+        const configured = String(parsed.apiBase || '').trim().replace(/\/$/, '');
+        return configured || DEFAULT_API;
+    } catch {
+        return DEFAULT_API;
+    }
+}
+const explorerState = { rows: [], filteredRows: [] };
+
+const explorerTableBody = document.querySelector('table tbody');
+const explorerEngineSelect = document.querySelector('select');
+const explorerSearchInput = document.querySelector('input[placeholder="Search telemetry..."]');
+const explorerExportButton = document.querySelector('button.bg-primary');
+const explorerLiveCount = document.querySelector('main .text-xs.text-zinc-500.font-mono');
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function statusClasses(status) {
+    if (status === 'CRITICAL') return 'bg-red-500/10 text-red-500 border-red-500/20';
+    if (status === 'WARNING') return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
+    return 'bg-green-500/10 text-green-500 border-green-500/20';
+}
+
+function statusDot(status) {
+    if (status === 'CRITICAL') return 'bg-red-500';
+    if (status === 'WARNING') return 'bg-amber-500';
+    return 'bg-green-500';
+}
+
+function trendBars(values, status) {
+    const color = status === 'CRITICAL' ? 'bg-red-500' : status === 'WARNING' ? 'bg-amber-500' : 'bg-primary';
+    return values
+        .map((value) => {
+            const height = Math.max(4, Math.min(32, value * 0.32));
+            return `<div class="${color} w-1" style="height:${height}px"></div>`;
+        })
+        .join('');
+}
+
+function renderExplorerRows(rows) {
+    if (!explorerTableBody) {
+        return;
+    }
+
+    explorerTableBody.innerHTML = rows.length
+        ? rows
+                .map(
+                    (row) => `
+                        <tr class="hover:bg-zinc-900/50 transition-colors group">
+                            <td class="px-6 py-4 font-mono text-xs text-zinc-300">ENGINE-${String(row.engineId).padStart(3, '0')} · C${row.cycle}</td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusClasses(row.status)}">
+                                    <span class="h-1 w-1 rounded-full ${statusDot(row.status)}"></span>
+                                    ${escapeHtml(row.status)}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 font-mono text-sm text-white">${row.t2.toFixed(2)} <span class="text-[10px] text-zinc-600">°R</span></td>
+                            <td class="px-6 py-4 font-mono text-sm text-white">${row.p30.toFixed(2)} <span class="text-[10px] text-zinc-600">psi</span></td>
+                            <td class="px-6 py-4 font-mono text-sm text-white">${row.n1.toFixed(2)} <span class="text-[10px] text-zinc-600">k</span></td>
+                            <td class="px-6 py-4 font-mono text-sm ${row.status === 'CRITICAL' ? 'text-red-500' : row.status === 'WARNING' ? 'text-amber-500' : 'text-white'}">${row.vibe.toFixed(3)} <span class="text-[10px] text-zinc-600">g</span></td>
+                            <td class="px-6 py-4">
+                                <div class="h-8 w-24 flex items-end gap-[1px]">${trendBars(row.trend, row.status)}</div>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <button class="text-zinc-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity" data-engine-id="${row.engineId}">
+                                    <span class="material-symbols-outlined text-lg">open_in_new</span>
+                                </button>
+                            </td>
+                        </tr>
+                    `,
+                )
+                .join('')
+        : '<tr><td colspan="8" class="px-6 py-12 text-center text-zinc-500">No telemetry matches the current filters.</td></tr>';
+}
+
+function updateExplorerMetrics() {
+    if (!explorerLiveCount) {
+        return;
+    }
+
+    explorerLiveCount.textContent = `${explorerState.filteredRows.length.toLocaleString()} RECORDS FOUND`;
+}
+
+function applyExplorerFilters() {
+    const selectedEngine = explorerEngineSelect?.value || 'all';
+    const query = (explorerSearchInput?.value || '').trim().toLowerCase();
+
+    explorerState.filteredRows = explorerState.rows.filter((row) => {
+        const matchesEngine = selectedEngine === 'all' || String(row.engineId) === selectedEngine;
+        const haystack = `${row.engineId} ${row.cycle} ${row.status} ${row.t2} ${row.p30} ${row.n1} ${row.vibe}`.toLowerCase();
+        const matchesQuery = !query || haystack.includes(query);
+        return matchesEngine && matchesQuery;
+    });
+
+    renderExplorerRows(explorerState.filteredRows);
+    updateExplorerMetrics();
+}
+
+function populateExplorerEngineFilter(rows) {
+    if (!explorerEngineSelect) {
+        return;
+    }
+
+    const engineIds = [...new Set(rows.map((row) => row.engineId))].sort((a, b) => a - b);
+    explorerEngineSelect.innerHTML = ['<option value="all">All Engines</option>', ...engineIds.map((id) => `<option value="${id}">Engine-ID: TF-${String(id).padStart(5, '0')}</option>`)].join('');
+}
+
+function downloadExplorerCsv() {
+    const header = ['engineId', 'cycle', 'status', 't2', 'p30', 'n1', 'vibe', 'health', 'actualRul', 'predictedRul', 'error'];
+    const csv = [header.join(',')]
+        .concat(
+            explorerState.filteredRows.map((row) => header.map((key) => JSON.stringify(row[key] ?? '')).join(',')),
+        )
+        .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'aeropredict-telemetry.csv';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+}
+
+async function loadExplorerData() {
+    const response = await fetch(`${EXPLORER_API}/api/explorer?dataset=FD001&limit=25`);
+    if (!response.ok) {
+        throw new Error(`Explorer request failed with ${response.status}`);
+    }
+
+    const payload = await response.json();
+    explorerState.rows = payload.rows || [];
+    populateExplorerEngineFilter(explorerState.rows);
+    applyExplorerFilters();
+}
+
+if (explorerEngineSelect) {
+    explorerEngineSelect.addEventListener('change', applyExplorerFilters);
+}
+
+if (explorerSearchInput) {
+    explorerSearchInput.addEventListener('input', applyExplorerFilters);
+}
+
+if (explorerExportButton) {
+    explorerExportButton.addEventListener('click', downloadExplorerCsv);
+}
+
+loadExplorerData().catch((error) => {
+    console.error(error);
+    if (explorerTableBody) {
+        explorerTableBody.innerHTML = '<tr><td colspan="8" class="px-6 py-12 text-center text-red-400">Failed to load explorer data.</td></tr>';
+    }
+});
+
+window.addEventListener('aeropredict:settings-updated', () => {
+    EXPLORER_API = getConfiguredApiBase();
+    loadExplorerData().catch((error) => {
+        console.error(error);
+        if (explorerTableBody) {
+            explorerTableBody.innerHTML = '<tr><td colspan="8" class="px-6 py-12 text-center text-red-400">Failed to load explorer data.</td></tr>';
+        }
+    });
+});
+</script>
 </body></html>

@@ -84,7 +84,7 @@ def make_loader(X: np.ndarray, y: np.ndarray, batch_size: int, shuffle: bool) ->
 
 def evaluate_model(model: LSTMRULPredictor, loader: DataLoader, device: torch.device) -> tuple[float, float, float, np.ndarray, np.ndarray]:
     model.eval()
-    if len(loader.dataset) == 0:
+    if len(loader) == 0:
         return 0.0, 0.0, 0.0, np.array([]), np.array([])
         
     preds: list[np.ndarray] = []

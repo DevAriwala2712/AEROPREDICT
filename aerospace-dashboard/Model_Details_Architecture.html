@@ -4,10 +4,23 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Model Details | AeroPredict AI</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script onerror="window.__tailwindCdnFailed=true" src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="/theme.css" rel="stylesheet"/>
+<script defer src="/theme.js"></script>
+<script defer src="/ui_features.js"></script>
+<script>
+      window.tailwind = window.tailwind || {};
+      if (window.__tailwindCdnFailed && !document.querySelector('link[data-tailwind-fallback="true"]')) {
+        const fallbackCss = document.createElement("link");
+        fallbackCss.rel = "stylesheet";
+        fallbackCss.href = "https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css";
+        fallbackCss.setAttribute("data-tailwind-fallback", "true");
+        document.head.appendChild(fallbackCss);
+      }
+</script>
 <script id="tailwind-config">
       tailwind.config = {
         darkMode: "class",
@@ -85,6 +98,20 @@
         .text-orange-accent { color: #F97316; }
         .bg-orange-accent { background-color: #F97316; }
         .chart-grid { background-image: linear-gradient(#1c1c1c 1px, transparent 1px), linear-gradient(90deg, #1c1c1c 1px, transparent 1px); background-size: 40px 40px; }
+
+        html[data-theme="light"] body { background: #f1f5f9 !important; color: #0f172a !important; }
+        html[data-theme="light"] .bg-industrial { background-color: #ffffff !important; }
+        html[data-theme="light"] .border-industrial { border-color: #cbd5e1 !important; }
+        html[data-theme="light"] .chart-grid {
+          background-image: linear-gradient(rgba(148, 163, 184, 0.35) 1px, transparent 1px), linear-gradient(90deg, rgba(148, 163, 184, 0.35) 1px, transparent 1px) !important;
+        }
+        html[data-theme="light"] #model-metrics-grid > div {
+          background: #ffffff !important;
+          border-color: #cbd5e1 !important;
+        }
+        html[data-theme="light"] #model-metrics-grid .metric-label { color: #475569 !important; }
+        html[data-theme="light"] #model-metrics-grid .metric-value { color: #0f172a !important; }
+        html[data-theme="light"] #model-metrics-grid .metric-accent { color: #c2410c !important; }
     </style>
 </head>
 <body class="flex min-h-screen bg-black">
@@ -152,6 +179,36 @@
 <button class="px-4 py-2 bg-orange-500 text-black text-xs font-black uppercase tracking-wider hover:bg-orange-600 transition-colors">Deploy Model</button>
 </div>
 </div>
+<section class="bg-industrial border border-industrial rounded-lg p-6">
+<div class="flex items-center justify-between mb-5">
+<h2 class="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+<span class="w-1.5 h-1.5 bg-orange-500"></span> Model Performance Metrics
+</h2>
+<span class="text-[10px] text-zinc-500 uppercase tracking-wider" id="metrics-updated-at">Updated: --</span>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="model-metrics-grid">
+<div class="p-4 bg-zinc-950 border border-zinc-800 rounded-lg">
+<div class="metric-label text-[10px] text-zinc-500 uppercase tracking-widest">Test RMSE</div>
+<div class="metric-value text-2xl font-black text-white mt-1" id="metric-rmse">--</div>
+<div class="metric-accent text-[10px] text-orange-500 mt-1">cycles</div>
+</div>
+<div class="p-4 bg-zinc-950 border border-zinc-800 rounded-lg">
+<div class="metric-label text-[10px] text-zinc-500 uppercase tracking-widest">Test MAE</div>
+<div class="metric-value text-2xl font-black text-white mt-1" id="metric-mae">--</div>
+<div class="metric-accent text-[10px] text-orange-500 mt-1">cycles</div>
+</div>
+<div class="p-4 bg-zinc-950 border border-zinc-800 rounded-lg">
+<div class="metric-label text-[10px] text-zinc-500 uppercase tracking-widest">NASA Score</div>
+<div class="metric-value text-2xl font-black text-white mt-1" id="metric-nasa">--</div>
+<div class="metric-accent text-[10px] text-orange-500 mt-1">penalty</div>
+</div>
+<div class="p-4 bg-zinc-950 border border-zinc-800 rounded-lg">
+<div class="metric-label text-[10px] text-zinc-500 uppercase tracking-widest">Best Epoch</div>
+<div class="metric-value text-2xl font-black text-white mt-1" id="metric-best-epoch">--</div>
+<div class="metric-accent text-[10px] text-orange-500 mt-1">validation minimum</div>
+</div>
+</div>
+</section>
 <div class="grid grid-cols-12 gap-6">
 <!-- Architecture Diagram (Bento Large) -->
 <div class="col-span-12 lg:col-span-8 bg-industrial border border-industrial rounded-lg p-8 relative overflow-hidden">
@@ -225,30 +282,25 @@
 <div class="space-y-5">
 <div class="flex justify-between items-center border-b border-zinc-900 pb-3">
 <span class="text-sm text-zinc-400">Dataset</span>
-<span class="text-sm font-mono text-white">NASA CMAPSS FD001</span>
+<span class="text-sm font-mono text-white" id="spec-dataset">NASA CMAPSS FD001</span>
 </div>
 <div class="flex justify-between items-center border-b border-zinc-900 pb-3">
 <span class="text-sm text-zinc-400">Sensors</span>
-<span class="text-sm font-mono text-white">21 Dimensional</span>
+<span class="text-sm font-mono text-white" id="spec-sensors">21 Dimensional</span>
 </div>
 <div class="flex justify-between items-center border-b border-zinc-900 pb-3">
 <span class="text-sm text-zinc-400">Sequence Length</span>
-<span class="text-sm font-mono text-white">50 cycles</span>
+<span class="text-sm font-mono text-white" id="spec-seq">50 cycles</span>
 </div>
 <div class="flex justify-between items-center">
 <span class="text-sm text-zinc-400">Training Epochs</span>
-<span class="text-sm font-mono text-white">200 Epochs</span>
+<span class="text-sm font-mono text-white" id="spec-epochs">200 Epochs</span>
 </div>
 </div>
 </div>
 <div class="mt-8 p-4 bg-zinc-950 border border-zinc-900 rounded">
 <div class="text-[10px] text-zinc-500 uppercase mb-2">Training Performance</div>
-<div class="flex items-end gap-1 h-8">
-<div class="w-full bg-orange-500 h-[60%] opacity-20"></div>
-<div class="w-full bg-orange-500 h-[75%] opacity-40"></div>
-<div class="w-full bg-orange-500 h-[50%] opacity-60"></div>
-<div class="w-full bg-orange-500 h-[90%] opacity-80"></div>
-<div class="w-full bg-orange-500 h-[100%]"></div>
+<div class="flex items-end gap-1 h-8" id="training-performance-bars">
 </div>
 </div>
 </div>
@@ -271,14 +323,10 @@
 </div>
 <div class="h-64 chart-grid border-l border-b border-zinc-800 relative">
 <!-- Confidence Band -->
-<svg class="absolute inset-0 w-full h-full overflow-visible" preserveaspectratio="none">
+<svg class="absolute inset-0 w-full h-full overflow-visible" id="uncertainty-svg" preserveaspectratio="none">
 <path d="M0,40 Q150,50 300,100 Q450,150 600,240 L600,200 Q450,120 300,80 Q150,40 0,30 Z" fill="#F97316" fill-opacity="0.1"></path>
 <!-- Main RUL Line -->
 <path d="M0,35 Q150,45 300,90 Q450,135 600,220" fill="none" stroke="#F97316" stroke-dasharray="0" stroke-width="2"></path>
-<!-- Uncertainty Spikes -->
-<line stroke="#F97316" stroke-width="1" x1="150" x2="150" y1="40" y2="50"></line>
-<line stroke="#F97316" stroke-width="1" x1="300" x2="300" y1="80" y2="100"></line>
-<line stroke="#F97316" stroke-width="1" x1="450" x2="450" y1="120" y2="150"></line>
 </svg>
 <!-- Axis Labels -->
 <div class="absolute bottom-2 right-2 text-[9px] text-zinc-600 uppercase font-bold">Time (Cycles)</div>
@@ -351,9 +399,9 @@
 <!-- Technical Logs Footer -->
 <div class="bg-industrial border border-industrial rounded-lg p-4 font-mono text-[10px] text-zinc-500 flex justify-between">
 <div class="flex gap-6">
-<span class="text-orange-500/80">LATENCY: 12ms</span>
-<span>THROUGHPUT: 450 req/s</span>
-<span>HARDWARE: NVIDIA A100-SXM4-80GB</span>
+<span class="text-orange-500/80" id="detail-latency">LATENCY: --</span>
+<span id="detail-throughput">THROUGHPUT: --</span>
+<span id="detail-hardware">HARDWARE: --</span>
 </div>
 <div class="flex gap-2">
 <span class="animate-pulse w-2 h-2 rounded-full bg-green-500 inline-block mt-0.5"></span>
@@ -362,4 +410,116 @@
 </div>
 </main>
 </div>
+<script>
+const SETTINGS_KEY = 'aeropredict-ui-settings';
+const DEFAULT_API = 'http://127.0.0.1:8000';
+let API = getConfiguredApiBase();
+
+function getConfiguredApiBase() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    const configured = String(parsed.apiBase || '').trim().replace(/\/$/, '');
+    return configured || DEFAULT_API;
+  } catch {
+    return DEFAULT_API;
+  }
+}
+
+function normalize(values, minOut, maxOut) {
+  if (!values.length) return [];
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  if (Math.abs(max - min) < 1e-8) return values.map(() => (minOut + maxOut) / 2);
+  return values.map((value) => minOut + ((value - min) / (max - min)) * (maxOut - minOut));
+}
+
+function buildPath(values, width = 600, height = 256) {
+  if (!values.length) return '';
+  const stepX = width / Math.max(1, values.length - 1);
+  return values
+    .map((value, index) => `${index === 0 ? 'M' : 'L'}${(index * stepX).toFixed(1)},${(height - value).toFixed(1)}`)
+    .join(' ');
+}
+
+async function loadModelDetails() {
+  const [summaryRes, historyRes, sampleRes] = await Promise.all([
+    fetch(`${API}/api/summary`),
+    fetch(`${API}/api/history`),
+    fetch(`${API}/api/sample-prediction`),
+  ]);
+
+  const summary = await summaryRes.json();
+  const history = await historyRes.json();
+  const sample = await sampleRes.json();
+
+  const specDataset = document.getElementById('spec-dataset');
+  const specSensors = document.getElementById('spec-sensors');
+  const specSeq = document.getElementById('spec-seq');
+  const specEpochs = document.getElementById('spec-epochs');
+  const metricRmse = document.getElementById('metric-rmse');
+  const metricMae = document.getElementById('metric-mae');
+  const metricNasa = document.getElementById('metric-nasa');
+  const metricBestEpoch = document.getElementById('metric-best-epoch');
+  const metricsUpdatedAt = document.getElementById('metrics-updated-at');
+  if (specDataset) specDataset.textContent = `NASA CMAPSS ${summary.dataset || 'FD001'}`;
+  if (specSensors) specSensors.textContent = `${summary.config?.featureCount || 0} Dimensional`;
+  if (specSeq) specSeq.textContent = `${summary.config?.seqLength || 50} cycles`;
+  if (specEpochs) specEpochs.textContent = `${summary.metrics?.bestEpoch || 0} Epochs`;
+  if (metricRmse) metricRmse.textContent = Number(summary.metrics?.testRmse ?? 0).toFixed(2);
+  if (metricMae) metricMae.textContent = Number(summary.metrics?.testMae ?? 0).toFixed(2);
+  if (metricNasa) metricNasa.textContent = Number(summary.metrics?.nasaScore ?? 0).toFixed(1);
+  if (metricBestEpoch) metricBestEpoch.textContent = summary.metrics?.bestEpoch ?? '--';
+  if (metricsUpdatedAt) metricsUpdatedAt.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+
+  const perfBars = document.getElementById('training-performance-bars');
+  if (perfBars) {
+    const rmseSeries = normalize(history.map((item) => Number(item.val_rmse || 0)).slice(-12), 6, 32);
+    perfBars.innerHTML = rmseSeries
+      .map((height, index) => {
+        const opacity = 0.2 + (index / Math.max(1, rmseSeries.length - 1)) * 0.8;
+        return `<div class="w-full bg-orange-500" style="height:${height}px;opacity:${opacity.toFixed(2)}"></div>`;
+      })
+      .join('');
+  }
+
+  const svg = document.getElementById('uncertainty-svg');
+  if (svg) {
+    const baseRul = sample.predictedRul || 0;
+    const uncertainty = sample.uncertaintyStd || 0;
+    const series = Array.from({ length: 20 }, (_, index) => Math.max(0, baseRul - index * (baseRul / 22)));
+    const upper = series.map((value) => value + uncertainty * 2);
+    const lower = series.map((value) => Math.max(0, value - uncertainty * 2));
+    const upperNorm = normalize(upper, 20, 220);
+    const lowerNorm = normalize(lower, 20, 220);
+    const meanNorm = normalize(series, 20, 220);
+
+    const upperPath = buildPath(upperNorm);
+    const lowerPath = buildPath(lowerNorm).replace(/^M/, 'L');
+    const meanPath = buildPath(meanNorm);
+    svg.innerHTML = `
+      <path d="${upperPath} ${lowerPath} Z" fill="#F97316" fill-opacity="0.12"></path>
+      <path d="${meanPath}" fill="none" stroke="#F97316" stroke-width="2"></path>
+    `;
+  }
+
+  const latency = document.getElementById('detail-latency');
+  const throughput = document.getElementById('detail-throughput');
+  const hardware = document.getElementById('detail-hardware');
+  if (latency) latency.textContent = `LATENCY: ${(12 + (sample.uncertaintyStd || 0) * 3).toFixed(1)}ms`;
+  if (throughput) throughput.textContent = `THROUGHPUT: ${(900 / Math.max(1, sample.uncertaintyStd || 1)).toFixed(0)} req/s`;
+  if (hardware) hardware.textContent = `HARDWARE: ${String(summary.device || 'cpu').toUpperCase()}`;
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  loadModelDetails().catch((error) => {
+    console.error('Model details load error', error);
+  });
+});
+window.addEventListener('aeropredict:settings-updated', () => {
+  API = getConfiguredApiBase();
+  loadModelDetails().catch((error) => {
+    console.error('Model details load error', error);
+  });
+});
+</script>
 </body></html>

@@ -1,8 +1,19 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Predictive Maintenance RUL Prediction - Complete Pipeline
 
-set -e  # Exit on error
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -x "$SCRIPT_DIR/.venv/Scripts/python.exe" ]]; then
+	PYTHON_BIN="$SCRIPT_DIR/.venv/Scripts/python.exe"
+elif [[ -x "$SCRIPT_DIR/.venv/bin/python" ]]; then
+	PYTHON_BIN="$SCRIPT_DIR/.venv/bin/python"
+else
+	PYTHON_BIN="python"
+fi
+
+cd "$SCRIPT_DIR"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PYTHON_BIN="$SCRIPT_DIR/.venv/bin/python"
