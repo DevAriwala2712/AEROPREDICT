@@ -21,6 +21,10 @@
   .stat-card { transition: border-color 0.2s, box-shadow 0.2s; }
   .stat-card:hover { border-color: rgba(45,212,191,0.5); box-shadow: 0 0 20px rgba(45,212,191,0.08); }
   .spinner { border: 2px solid #333; border-top-color: #F97316; border-radius: 50%; width:18px; height:18px; animation: spin 0.8s linear infinite; display:inline-block; }
+  .aero-nav-select { color-scheme: dark; color: #f4f4f5; background-color: #18181b; }
+  .aero-nav-select option { color: #f4f4f5; background-color: #18181b; }
+  .aero-nav-select option:checked { color: #fff; background-color: #3f3f46; }
+  .aero-nav-select:focus-visible { outline: 2px solid #f97316; outline-offset: 2px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
@@ -71,13 +75,13 @@
     <div class="flex items-center gap-6">
       <span class="text-xl font-bold uppercase tracking-widest text-white">AERO-NAV</span>
       <div class="relative">
-        <select id="dataset-select" class="bg-zinc-900 border border-zinc-700 text-zinc-300 text-xs px-3 py-1.5 rounded-md focus:ring-1 focus:ring-orange-500 outline-none appearance-none pr-8 mr-2">
+        <select id="dataset-select" class="aero-nav-select bg-zinc-900 border border-zinc-700 text-xs px-3 py-1.5 rounded-md focus:ring-1 focus:ring-orange-500 appearance-none pr-8 mr-2">
           <option value="FD001">FD001</option>
           <option value="FD002">FD002</option>
           <option value="FD003">FD003</option>
           <option value="FD004">FD004</option>
         </select>
-        <select id="engine-select" class="bg-zinc-900 border border-zinc-700 text-zinc-300 text-xs px-3 py-1.5 rounded-md focus:ring-1 focus:ring-orange-500 outline-none appearance-none pr-8">
+        <select id="engine-select" class="aero-nav-select bg-zinc-900 border border-zinc-700 text-xs px-3 py-1.5 rounded-md focus:ring-1 focus:ring-orange-500 appearance-none pr-8">
           <option value="">Loading engines...</option>
         </select>
         <span class="material-symbols-outlined absolute right-2 top-1.5 text-zinc-500 pointer-events-none text-sm">expand_more</span>
@@ -286,7 +290,7 @@ async function loadEngineIds(dataset) {
   const ids = await res.json();
   const sel = document.getElementById('engine-select');
   sel.innerHTML = ids.map(id => `<option value="${id}">${dataset}-ENG-${String(id).padStart(3,'0')}</option>`).join('');
-  sel.onchange = () => loadPrediction(parseInt(sel.value));
+  sel.onchange = () => refreshAll();
 }
 
 async function loadSummary() {
@@ -310,22 +314,35 @@ async function loadSummary() {
   document.getElementById('last-sync-label').textContent = `LAST SYNC: ${new Date().toLocaleTimeString()}`;
 }
 
-async function loadPrediction(engineId) {
-  const dataset = getSelectedDataset();
-  const url = engineId ? `${getApiBase()}/api/sample-prediction?dataset=${dataset}&engineId=${engineId}` : `${getApiBase()}/api/sample-prediction?dataset=${dataset}`;
-  const res = await fetch(url);
-  const d = await res.json();
+function updatePredictionStats(prediction) {
+  if (!prediction) {
+    document.getElementById('kpi-rul').textContent = '--';
+    document.getElementById('kpi-rul-sub').textContent = 'No cached prediction available';
+    document.getElementById('kpi-health').textContent = '--';
+    document.getElementById('health-bar').style.width = '0%';
+    document.getElementById('kpi-uncertainty').textContent = 'Uncertainty: available in Run Prediction';
+    document.getElementById('kpi-risk').textContent = '--';
+    document.getElementById('kpi-risk').className = 'text-3xl font-black text-zinc-400';
+    document.getElementById('risk-icon').textContent = 'help';
+    document.getElementById('risk-icon').className = 'material-symbols-outlined text-zinc-400';
+    document.getElementById('alert-banner').classList.add('hidden');
+    return;
+  }
 
-  const rul = d.predictedRul;
-  const actual = d.actualRul;
+  const rul = Number(prediction.predictedRul);
+  const actual = Number(prediction.actualRul);
+  if (!Number.isFinite(rul) || !Number.isFinite(actual)) {
+    updatePredictionStats(null);
+    return;
+  }
   const health = Math.min(100, Math.max(0, (rul / 125) * 100));
   const risk = getRiskLevel(rul);
 
   document.getElementById('kpi-rul').textContent = fmtNum(rul, 1);
-  document.getElementById('kpi-rul-sub').textContent = `Actual: ${fmtNum(actual, 1)} | Error: ${fmtNum(d.absoluteError, 1)} cycles`;
+  document.getElementById('kpi-rul-sub').textContent = `Engine ${prediction.engineId} · Actual: ${fmtNum(actual, 1)} | Error: ${fmtNum(Math.abs(rul - actual), 1)} cycles`;
   document.getElementById('kpi-health').textContent = `${health.toFixed(0)}%`;
   document.getElementById('health-bar').style.width = `${health}%`;
-  document.getElementById('kpi-uncertainty').textContent = `Uncertainty: ±${fmtNum(d.uncertaintyStd, 2)} cycles`;
+  document.getElementById('kpi-uncertainty').textContent = 'Uncertainty: available in Run Prediction';
 
   const kpiRisk = document.getElementById('kpi-risk');
   const riskIcon = document.getElementById('risk-icon');
@@ -337,7 +354,7 @@ async function loadPrediction(engineId) {
   // Show alert if RUL is critical
   const banner = document.getElementById('alert-banner');
   if (rul < 60) {
-    document.getElementById('alert-text').textContent = `Engine ${d.engineId}: Predicted RUL is ${fmtNum(rul,1)} cycles. Immediate inspection advised.`;
+    document.getElementById('alert-text').textContent = `Engine ${prediction.engineId}: Predicted RUL is ${fmtNum(rul,1)} cycles. Immediate inspection advised.`;
     banner.classList.remove('hidden');
   } else {
     banner.classList.add('hidden');
@@ -355,10 +372,14 @@ async function loadCharts() {
 
   if (preds.error) {
     console.error('All predictions error:', preds.error);
+    updatePredictionStats(null);
     return;
   }
 
   const engineData = preds.engines || [];
+  const selectedEngineId = Number(document.getElementById('engine-select').value);
+  const selectedPrediction = engineData.find(prediction => prediction.engineId === selectedEngineId) || engineData[0];
+  updatePredictionStats(selectedPrediction);
 
   // Scatter chart
   const scatterCtx = document.getElementById('scatter-chart').getContext('2d');
@@ -477,7 +498,7 @@ async function loadCharts() {
 async function refreshAll() {
   document.getElementById('status-badge').textContent = 'Refreshing...';
   try {
-    await Promise.all([loadSummary(), loadPrediction(), loadCharts()]);
+    await Promise.all([loadSummary(), loadCharts()]);
   } catch(err) {
     document.getElementById('status-badge').textContent = 'Error — is the server running?';
     console.error(err);

@@ -149,6 +149,7 @@ Runtime preferences panel for API base URL, refresh interval, compact tables, mo
 - `models/learning_curves.png`
 - `models/actual_vs_predicted_FD00X.png`
 - `models/error_histogram_FD00X.png`
+- `models/prediction_cache/*.npz` (deployment-generated test predictions)
 
 ## Cross-Dataset Generalization
 
@@ -257,6 +258,7 @@ AEROPREDICT/
 		download_data.py
 		evaluate.py
 		model.py
+		precompute_predictions.py
 		train.py
 		train_advanced.py
 	requirements.txt
@@ -314,7 +316,7 @@ For a Render web service, use these commands:
 **Build command**
 
 ```bash
-pip install --no-cache-dir -r requirements-render.txt && python src/download_data.py
+pip install --no-cache-dir -r requirements-render.txt && python src/download_data.py && python src/precompute_predictions.py
 ```
 
 **Start command**
@@ -324,6 +326,8 @@ gunicorn --chdir src --bind 0.0.0.0:$PORT --workers 1 --timeout 120 api_server:a
 ```
 
 The Render requirements install CPU-only PyTorch and omit notebook/unused vision packages to reduce deployment resource use. If the service still exceeds Render's 512 MB instance memory, use an instance with more memory.
+
+The build step also precomputes and stores compact prediction caches for the model's training datasets. The dashboard reuses these cached results for fleet summaries and charts; a selected engine prediction still runs when requested.
 
 ## Troubleshooting
 

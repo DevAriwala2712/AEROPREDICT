@@ -55,13 +55,35 @@ def _read_cmapss_table(path: Path, column_names: list[str]) -> pd.DataFrame:
     return frame
 
 
+def load_test_data(dataset: str = DEFAULT_DATASET) -> tuple[pd.DataFrame, pd.DataFrame]:
+    dataset = dataset.upper()
+    if dataset == "MULTI":
+        test_frames = []
+        rul_frames = []
+        max_unit_id = 0
+        for current_dataset in ("FD001", "FD002", "FD003", "FD004"):
+            test_df, rul_df = load_test_data(current_dataset)
+            test_df["unit_id"] += max_unit_id
+            max_unit_id = int(test_df["unit_id"].max())
+            test_frames.append(test_df)
+            rul_frames.append(rul_df)
+        return (
+            pd.concat(test_frames, ignore_index=True),
+            pd.concat(rul_frames, ignore_index=True),
+        )
+
+    paths = get_dataset_paths(dataset)
+    test_df = _read_cmapss_table(paths["test"], list(CMAPSS_COLUMNS))
+    rul_df = _read_cmapss_table(paths["rul"], ["RUL"])
+    return test_df, rul_df
+
+
 def load_data(dataset: str = DEFAULT_DATASET) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     if dataset.upper() == "MULTI":
         return load_combined_data(["FD001", "FD002", "FD003", "FD004"])
     paths = get_dataset_paths(dataset)
     train_df = _read_cmapss_table(paths["train"], list(CMAPSS_COLUMNS))
-    test_df = _read_cmapss_table(paths["test"], list(CMAPSS_COLUMNS))
-    rul_df = _read_cmapss_table(paths["rul"], ["RUL"])
+    test_df, rul_df = load_test_data(dataset)
     return train_df, test_df, rul_df
 
 

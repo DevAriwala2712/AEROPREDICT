@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +23,7 @@ try:
         DEFAULT_DATASET,
         get_dataset_paths,
         load_data,
+        load_test_data,
         prepare_test_samples,
         prepare_train_data,
     )
@@ -31,6 +33,7 @@ except ImportError:
     HAS_MODEL = False
     DEFAULT_DATASET = "FD001"
     get_dataset_paths = None  # type: ignore
+    load_test_data = None  # type: ignore
     LSTMRULPredictor = None  # type: ignore
     predict_with_uncertainty = None  # type: ignore
     load_data = None  # type: ignore
@@ -48,6 +51,9 @@ except ImportError:
 BASE_DIR = Path(__file__).resolve().parent.parent
 MODELS_DIR = BASE_DIR / "models"
 DASHBOARD_DIR = BASE_DIR / "aerospace-dashboard"
+PREDICTION_CACHE_DIR = MODELS_DIR / "prediction_cache"
+PREDICTION_CACHE_FORMAT = 1
+SUPPORTED_DATASETS = ("FD001", "FD002", "FD003", "FD004")
 
 
 def _get_pyplot() -> Any:
@@ -83,6 +89,67 @@ def _count_dataset_rows_and_engines(datasets: list[str]) -> tuple[int, int, int,
         engine_counts["train"],
         engine_counts["test"],
     )
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as file:
+        for chunk in iter(lambda: file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _prediction_cache_path(dataset: str) -> Path:
+    dataset = dataset.upper()
+    if dataset not in {*SUPPORTED_DATASETS, "MULTI"}:
+        raise ValueError(f"Unsupported dataset cache: {dataset}")
+    return PREDICTION_CACHE_DIR / f"{dataset}.npz"
+
+
+def _write_prediction_cache(dataset: str, cache: dict[str, Any]) -> None:
+    PREDICTION_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_path = _prediction_cache_path(dataset)
+    temporary_path = cache_path.with_suffix(".npz.part")
+    with temporary_path.open("wb") as file:
+        np.savez_compressed(
+            file,
+            format_version=np.asarray(PREDICTION_CACHE_FORMAT, dtype=np.int16),
+            checkpoint_sha256=np.asarray(_file_sha256(service.checkpoint_path)),
+            scaler_sha256=np.asarray(_file_sha256(service.scaler_path)),
+            dataset=np.asarray(dataset.upper()),
+            X_test=np.asarray(cache["X_test"], dtype=np.float32),
+            y_test=np.asarray(cache["y_test"], dtype=np.float32),
+            unit_ids=np.asarray(cache["unit_ids"], dtype=np.int32),
+            predictions=np.asarray(cache["predictions"], dtype=np.float32),
+            feature_columns=np.asarray(cache["feature_columns"], dtype=np.str_),
+            missing_features=np.asarray(cache["missing_features"], dtype=np.str_),
+        )
+    temporary_path.replace(cache_path)
+
+
+def _load_prediction_cache(dataset: str) -> dict[str, Any]:
+    cache_path = _prediction_cache_path(dataset)
+    with np.load(cache_path, allow_pickle=False) as archive:
+        if int(archive["format_version"]) != PREDICTION_CACHE_FORMAT:
+            raise RuntimeError(f"Unsupported prediction cache version: {cache_path}")
+        if str(archive["dataset"]) != dataset.upper():
+            raise RuntimeError(f"Prediction cache dataset mismatch: {cache_path}")
+        if str(archive["checkpoint_sha256"]) != _file_sha256(service.checkpoint_path):
+            raise RuntimeError(f"Prediction cache is stale for the current model: {cache_path}")
+        if str(archive["scaler_sha256"]) != _file_sha256(service.scaler_path):
+            raise RuntimeError(f"Prediction cache is stale for the current scaler: {cache_path}")
+
+        return {
+            "dataset": dataset.upper(),
+            "X_test": np.array(archive["X_test"], copy=True),
+            "y_test": np.array(archive["y_test"], copy=True),
+            "unit_ids": np.array(archive["unit_ids"], copy=True),
+            "predictions": np.array(archive["predictions"], copy=True),
+            "feature_columns": archive["feature_columns"].tolist(),
+            "missing_features": archive["missing_features"].tolist(),
+            "scaler": service.scaler,
+            "use_original_scaler": True,
+        }
 
 
 def get_device() -> Any:
@@ -297,10 +364,11 @@ class ModelApiService:
         y_test = test_cache["y_test"]
         predictions = test_cache["predictions"]
         
-        if predict_with_uncertainty is None or test_cache["X_test_tensor"] is None or self.model is None:
+        if predict_with_uncertainty is None or self.model is None:
             return
             
-        _, std_pred = predict_with_uncertainty(self.model, test_cache["X_test_tensor"], n_samples=20)
+        tensor = _get_scaled_test_tensor(test_cache)
+        _, std_pred = predict_with_uncertainty(self.model, tensor, n_samples=20)
         std_pred = std_pred.flatten()
 
         plt = _get_pyplot()
@@ -340,11 +408,12 @@ class ModelApiService:
         if not HAS_CAPTUM or IntegratedGradients is None or not HAS_TORCH or torch is None:
             return {"error": "Captum not installed"}
         
-        X_test_tensor = _get_dataset_cache(self.train_datasets[0]).get("X_test_tensor")
-        if X_test_tensor is None or self.model is None:
+        test_cache = _get_dataset_cache(self.train_datasets[0])
+        if self.model is None:
             return {"error": "Model or test data not available"}
         
         try:
+            X_test_tensor = _get_scaled_test_tensor(test_cache, limit=50)
             samples = X_test_tensor[:50].requires_grad_()
             ig = IntegratedGradients(self.model)  # type: ignore
             baseline = torch.zeros_like(samples)
@@ -498,98 +567,136 @@ service = ModelApiService()
 _fresh_cache: dict[str, dict] = {}
 
 
-def _get_dataset_cache(dataset: str) -> dict:
-    """Return (and memoize) predictions for any of the 4 C-MAPSS datasets.
-
-    For datasets the model was trained on (in service.train_datasets), uses
-    service.scaler (fitted on all training data combined). For unseen datasets,
-    fits a fresh scaler on that dataset's training data.
-    """
+def _get_dataset_cache(dataset: str, force_recompute: bool = False) -> dict:
+    """Load deployment-precomputed predictions, or compute an unseen dataset locally."""
     dataset = dataset.upper()
 
-    if dataset in _fresh_cache:
+    if not force_recompute and dataset in _fresh_cache:
         return _fresh_cache[dataset]
 
     if not HAS_MODEL or not HAS_TORCH or torch is None or not service.available:
         return {"error": "Model not available", "predictions": np.array([])}
 
     try:
-        if load_data is None or prepare_train_data is None or prepare_test_samples is None:
+        cache_path = _prediction_cache_path(dataset)
+        if not force_recompute and cache_path.is_file():
+            cache = _load_prediction_cache(dataset)
+            _fresh_cache.clear()
+            _fresh_cache[dataset] = cache
+            return cache
+
+        if force_recompute:
+            _fresh_cache.clear()
+
+        if load_test_data is None or prepare_test_samples is None:
             return {"error": "Data loading functions not available", "predictions": np.array([])}
-        
-        from sklearn.preprocessing import StandardScaler
 
-        _fresh_cache.clear()
-        train_df, test_df, rul_df = load_data(dataset)
-        _, feature_columns, _ = prepare_train_data(train_df, max_rul=service.max_rul)
+        if dataset == "MULTI" or dataset in service.train_datasets:
+            test_df, rul_df = load_test_data(dataset)
+            scaler = service.scaler
+            use_original_scaler = True
+            feature_columns = list(service.config.get("feature_columns", []))
+            available = [feature for feature in feature_columns if feature in test_df.columns]
+            missing = [feature for feature in feature_columns if feature not in test_df.columns]
+        else:
+            if load_data is None or prepare_train_data is None:
+                return {"error": "Training data loader is not available", "predictions": np.array([])}
+            from sklearn.preprocessing import StandardScaler
+            from data_loader import create_sequences_per_engine
 
-        trained_features = service.config.get("feature_columns", [])
-        available = [f for f in trained_features if f in feature_columns]
-        missing   = [f for f in trained_features if f not in feature_columns]
+            train_df, test_df, rul_df = load_data(dataset)
+            prepared, feature_columns, target = prepare_train_data(train_df, max_rul=service.max_rul)
+            available = [feature for feature in feature_columns if feature in test_df.columns]
+            missing = [feature for feature in feature_columns if feature not in test_df.columns]
+            X_train_ds, _ = create_sequences_per_engine(
+                prepared, available, target, seq_length=service.seq_length
+            )
+            scaler = StandardScaler()
+            scaler.fit(X_train_ds.reshape(-1, X_train_ds.shape[-1]))
+            del prepared, X_train_ds
+            use_original_scaler = False
+
+        if scaler is None:
+            return {"error": "Scaler not available", "predictions": np.array([])}
+
+        if not available:
+            return {"error": f"No usable features found for {dataset}", "predictions": np.array([])}
 
         X_test, y_test, unit_ids = prepare_test_samples(
             test_df, rul_df, available, seq_length=service.seq_length, max_rul=service.max_rul
         )
-
         if missing:
             zeros = np.zeros((X_test.shape[0], X_test.shape[1], len(missing)), dtype=np.float32)
             X_test = np.concatenate([X_test, zeros], axis=-1)
 
-        use_original_scaler = dataset in service.train_datasets
-        if use_original_scaler:
-            scaler = service.scaler
-        else:
-            from data_loader import create_sequences_per_engine
-            prepared, _, target = prepare_train_data(train_df, max_rul=service.max_rul)
-            X_train_ds, _ = create_sequences_per_engine(prepared, available, target, seq_length=service.seq_length)
-            if missing:
-                zeros_tr = np.zeros((X_train_ds.shape[0], X_train_ds.shape[1], len(missing)), dtype=np.float32)
-                X_train_ds = np.concatenate([X_train_ds, zeros_tr], axis=-1)
-            scaler = StandardScaler()
-            scaler.fit(X_train_ds.reshape(-1, X_train_ds.shape[-1]))
-            del prepared, X_train_ds
+        X_scaled = scaler.transform(
+            X_test.reshape(-1, X_test.shape[-1])
+        ).astype(np.float32, copy=False).reshape(X_test.shape)
 
-        if scaler is None:
-            return {"error": "Scaler not available", "predictions": np.array([])}
-        
-        X_scaled = scaler.transform(X_test.reshape(-1, X_test.shape[-1])).astype(np.float32, copy=False).reshape(X_test.shape)
+        if service.model is None:
+            return {"error": "Model is None", "predictions": np.array([])}
 
-        X_tensor = torch.as_tensor(X_scaled, dtype=torch.float32, device=service.device)
-        with torch.no_grad():
-            if service.model is None:
-                return {"error": "Model is None", "predictions": np.array([])}
-            predictions = service.model(X_tensor).cpu().numpy().flatten()
+        batches = []
+        with torch.inference_mode():
+            for start in range(0, len(X_scaled), 32):
+                batch = torch.as_tensor(
+                    X_scaled[start : start + 32], dtype=torch.float32, device=service.device
+                )
+                batches.append(service.model(batch).cpu().numpy().reshape(-1))
+        predictions = np.concatenate(batches) if batches else np.array([], dtype=np.float32)
+
+        cache = {
+            "dataset": dataset,
+            "X_test": X_test,
+            "y_test": y_test,
+            "unit_ids": unit_ids,
+            "predictions": predictions,
+            "feature_columns": available + missing,
+            "missing_features": missing,
+            "scaler": scaler,
+            "use_original_scaler": use_original_scaler,
+        }
     except Exception as e:
-        print(f"Error in _get_dataset_cache: {e}")
+        print(f"Error in _get_dataset_cache for {dataset}: {e}")
         return {"error": str(e), "predictions": np.array([])}
 
-    rul_indexed = rul_df.reset_index(names="unit_id").assign(unit_id=lambda df: df["unit_id"] + 1)
-    rul_indexed = rul_indexed.rename(columns={"RUL": "RUL_final"})
-    prepared_test_df = test_df.copy()
-    last_cycle = test_df.groupby("unit_id")["cycle"].max().rename("max_cycle")
-    prepared_test_df = prepared_test_df.merge(last_cycle.reset_index(), on="unit_id")
-    prepared_test_df["RUL"] = prepared_test_df["max_cycle"] - prepared_test_df["cycle"]
-    prepared_test_df = prepared_test_df.merge(rul_indexed, on="unit_id")
-    prepared_test_df["RUL"] = (prepared_test_df["max_cycle"] - prepared_test_df["cycle"]) + prepared_test_df["RUL_final"]
-    if service.max_rul:
-        prepared_test_df["RUL"] = prepared_test_df["RUL"].clip(upper=service.max_rul)
-
-    cache = {
-        "dataset": dataset,
-        "X_test": X_test,
-        "X_test_tensor": X_tensor,
-        "y_test": y_test,
-        "unit_ids": unit_ids,
-        "predictions": predictions,
-        "feature_columns": available,
-        "missing_features": missing,
-        "prepared_test_df": prepared_test_df,
-        "scaler": scaler,
-        "use_original_scaler": use_original_scaler,
-    }
-
+    _fresh_cache.clear()
     _fresh_cache[dataset] = cache
     return cache
+
+
+def _get_scaled_test_tensor(cache: dict[str, Any], limit: int | None = None) -> Any:
+    if torch is None:
+        raise RuntimeError("PyTorch is not available")
+    scaler = cache.get("scaler")
+    if scaler is None:
+        raise RuntimeError("Scaler is not available")
+
+    sequences = cache["X_test"]
+    if limit is not None:
+        sequences = sequences[:limit]
+    scaled = scaler.transform(sequences.reshape(-1, sequences.shape[-1]))
+    scaled = scaled.astype(np.float32, copy=False).reshape(sequences.shape)
+    return torch.as_tensor(scaled, dtype=torch.float32, device=service.device)
+
+
+def _load_prepared_test_frame(dataset: str) -> Any:
+    if load_test_data is None:
+        raise RuntimeError("Test data loader is not available")
+    test_df, rul_df = load_test_data(dataset)
+    last_cycle = test_df.groupby("unit_id")["cycle"].max().rename("max_cycle")
+    prepared = test_df.merge(last_cycle.reset_index(), on="unit_id")
+    prepared["RUL"] = prepared["max_cycle"] - prepared["cycle"]
+    rul_indexed = (
+        rul_df.reset_index(names="unit_id")
+        .assign(unit_id=lambda frame: frame["unit_id"] + 1)
+        .rename(columns={"RUL": "RUL_final"})
+    )
+    prepared = prepared.merge(rul_indexed, on="unit_id")
+    prepared["RUL"] = prepared["RUL"] + prepared["RUL_final"]
+    if service.max_rul:
+        prepared["RUL"] = prepared["RUL"].clip(upper=service.max_rul)
+    return prepared
 
 
 
@@ -680,11 +787,11 @@ def explorer() -> Any:
     limit = request.args.get("limit", default=25, type=int) or 25
 
     try:
-        if not HAS_MODEL or load_data is None:
+        if not HAS_MODEL or load_test_data is None:
             return jsonify({"error": "Data loading not available"}), 503
         
         cache = _get_dataset_cache(dataset)
-        _, test_df, _ = load_data(dataset)
+        test_df, _ = load_test_data(dataset)
         latest_rows = test_df.sort_values(["unit_id", "cycle"]).groupby("unit_id").tail(1)
 
         prediction_by_engine = {
@@ -894,10 +1001,7 @@ def engine_history() -> Any:
 
     try:
         cache = _get_dataset_cache(dataset)
-        prepared_test_df = cache.get("prepared_test_df")
-
-        if prepared_test_df is None:
-            return jsonify({"error": f"Prepared test data not available for {dataset}"}), 500
+        prepared_test_df = _load_prepared_test_frame(dataset)
 
         engine_data = prepared_test_df[prepared_test_df["unit_id"] == engine_id].sort_values("cycle")
         if engine_data.empty:
@@ -1014,13 +1118,14 @@ def api_explain() -> Any:
     def _fallback_importance() -> Any:
         cache = _get_dataset_cache(service.train_datasets[0])
         feature_columns = cache.get("feature_columns") or service.config.get("feature_columns") or []
-        prepared_test_df = cache.get("prepared_test_df")
+        try:
+            df_for_infer = _load_prepared_test_frame(service.train_datasets[0])
+        except Exception as exc:
+            return jsonify({"error": f"Feature importance data unavailable: {exc}"}), 503
 
-        df_for_infer = prepared_test_df
-        if (not feature_columns or len(feature_columns) == 0) and df_for_infer is not None:
-            # infer numeric feature columns excluding standard meta columns
+        if not feature_columns:
             meta = {"RUL", "unit_id", "cycle", "max_cycle", "RUL_final"}
-            feature_columns = [c for c in df_for_infer.columns if c not in meta]
+            feature_columns = [column for column in df_for_infer.columns if column not in meta]
 
         if df_for_infer is None or "RUL" not in df_for_infer.columns or len(feature_columns) == 0:
             return jsonify({"error": "Feature importance data unavailable"}), 503
@@ -1062,11 +1167,12 @@ def api_explain() -> Any:
             return jsonify({"error": f"fallback failed: {exc}"}), 500
 
     if HAS_CAPTUM and IntegratedGradients is not None and HAS_TORCH and torch is not None and service.available:
-        X_test_tensor = _get_dataset_cache(service.train_datasets[0]).get("X_test_tensor")
-        if X_test_tensor is None or service.model is None:
+        cache = _get_dataset_cache(service.train_datasets[0])
+        if service.model is None or "error" in cache:
             return _fallback_importance()
 
         try:
+            X_test_tensor = _get_scaled_test_tensor(cache, limit=50)
             samples = X_test_tensor[:50].requires_grad_()
             ig = IntegratedGradients(service.model)  # type: ignore
             baseline = torch.zeros_like(samples)
@@ -1094,15 +1200,9 @@ def api_latent_state() -> Any:
     dataset = request.args.get("dataset", service.dataset).upper()
     try:
         cache = _get_dataset_cache(dataset)
-        # Use first sample from test set
-        X_tensor = cache.get("X_test_tensor")
-        if X_tensor is None:
-            X_tensor = cache["X_test_tensor"][:1] if "X_test_tensor" in cache else None
-        else:
-            X_tensor = X_tensor[:1]
-        
-        if X_tensor is None:
-            return jsonify({"error": "Test tensor not available"}), 500
+        if "error" in cache:
+            return jsonify({"error": cache["error"]}), 503
+        X_tensor = _get_scaled_test_tensor(cache, limit=1)
         
         # We need the LSTM output before the FC layer
         # Since we can't easily modify the forward without changing model.py,
