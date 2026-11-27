@@ -305,6 +305,24 @@ Open in browser:
 - http://127.0.0.1:8000/Data_Explorer.html
 - http://127.0.0.1:8000/API_Deployment_Demo.html
 
+### Deploy to Render
+
+For a Render web service, use these commands:
+
+**Build command**
+
+```bash
+pip install --no-cache-dir -r requirements-render.txt && python src/download_data.py
+```
+
+**Start command**
+
+```bash
+gunicorn --chdir src --bind 0.0.0.0:$PORT --workers 1 --timeout 120 api_server:app
+```
+
+The Render requirements install CPU-only PyTorch and omit notebook/unused vision packages to reduce deployment resource use. If the service still exceeds Render's 512 MB instance memory, use an instance with more memory.
+
 ## Troubleshooting
 
 ### Dataset files contain HTML or malformed content
@@ -360,6 +378,8 @@ python src/train.py --epochs 10 --batch-size 64
 ```bash
 python src/train.py --batch-size 32 --seq-length 30
 ```
+
+For Render, use `requirements-render.txt` and the single-worker start command above. If Render still reports that the process exceeded 512 MB, increase the service's available memory.
 
 ## References
 

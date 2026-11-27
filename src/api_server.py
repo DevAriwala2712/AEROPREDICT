@@ -3,14 +3,8 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from threading import Lock
 from typing import Any
 
-import matplotlib
-
-matplotlib.use("Agg")
-
-import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 from flask import Flask, jsonify, request, send_from_directory
@@ -26,6 +20,7 @@ except ImportError:
 try:
     from data_loader import (
         DEFAULT_DATASET,
+        get_dataset_paths,
         load_data,
         prepare_test_samples,
         prepare_train_data,
@@ -35,6 +30,7 @@ try:
 except ImportError:
     HAS_MODEL = False
     DEFAULT_DATASET = "FD001"
+    get_dataset_paths = None  # type: ignore
     LSTMRULPredictor = None  # type: ignore
     predict_with_uncertainty = None  # type: ignore
     load_data = None  # type: ignore
@@ -52,6 +48,41 @@ except ImportError:
 BASE_DIR = Path(__file__).resolve().parent.parent
 MODELS_DIR = BASE_DIR / "models"
 DASHBOARD_DIR = BASE_DIR / "aerospace-dashboard"
+
+
+def _get_pyplot() -> Any:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    return plt
+
+
+def _count_dataset_rows_and_engines(datasets: list[str]) -> tuple[int, int, int, int]:
+    if get_dataset_paths is None:
+        raise RuntimeError("Dataset path helpers are not available")
+
+    row_counts = {"train": 0, "test": 0}
+    engine_counts = {"train": 0, "test": 0}
+    for dataset in datasets:
+        paths = get_dataset_paths(dataset)
+        for split in ("train", "test"):
+            engine_ids: set[int] = set()
+            with paths[split].open("r", encoding="utf-8") as data_file:
+                for line in data_file:
+                    columns = line.split()
+                    if columns:
+                        row_counts[split] += 1
+                        engine_ids.add(int(columns[0]))
+            engine_counts[split] += len(engine_ids)
+
+    return (
+        row_counts["train"],
+        row_counts["test"],
+        engine_counts["train"],
+        engine_counts["test"],
+    )
 
 
 def get_device() -> Any:
@@ -127,9 +158,6 @@ class ModelApiService:
         self.history_path = MODELS_DIR / "training_history.json"
         self.device = get_device()
         self.available = True
-        self._test_cache: dict[str, Any] = {}
-        self._test_cache_ready = False
-        self._test_cache_lock = Lock()
         
         # Check if required files exist and torch is available
         if not HAS_TORCH:
@@ -214,14 +242,6 @@ class ModelApiService:
         self._summary_cache: dict[str, Any] | None = None
         self._per_dataset_cache: dict[str, dict] = {}
 
-    def _get_test_cache(self) -> dict[str, Any]:
-        if not self._test_cache_ready:
-            with self._test_cache_lock:
-                if not self._test_cache_ready:
-                    self._test_cache = self._build_test_cache()
-                    self._test_cache_ready = True
-        return self._test_cache
-
     def _load_history(self) -> list[dict[str, Any]]:
         if self.history_path.exists():
             return json.loads(self.history_path.read_text(encoding="utf-8"))
@@ -242,94 +262,6 @@ class ModelApiService:
         model.eval()
         return model
 
-    def _build_test_cache(self) -> dict[str, Any]:
-        if not self.available or not HAS_MODEL or not HAS_TORCH or torch is None:
-            return {
-                "train_df": None,
-                "test_df": None,
-                "X_test_tensor": None,
-                "y_test": None,
-                "unit_ids": None,
-                "predictions": None,
-            }
-        
-        try:
-            if not HAS_MODEL or load_data is None or prepare_train_data is None or prepare_test_samples is None:
-                return {
-                    "train_df": None,
-                    "test_df": None,
-                    "X_test_tensor": None,
-                    "y_test": None,
-                    "unit_ids": None,
-                    "predictions": None,
-                }
-            
-            train_df, test_df, rul_df = load_data(self.dataset)
-            prepared_train_df, feature_columns, _ = prepare_train_data(train_df, max_rul=self.max_rul)
-            configured_features = self.config.get("feature_columns")
-            if configured_features:
-                feature_columns = list(configured_features)
-            X_test, y_test, unit_ids = prepare_test_samples(
-                test_df, rul_df, feature_columns, seq_length=self.seq_length, max_rul=self.max_rul
-            )
-            # reduce memory by ensuring float32 arrays before large reshape/scale operations
-            try:
-                X_test = X_test.astype(np.float32)
-            except Exception:
-                pass
-            if self.scaler is None or self.model is None:
-                return {
-                    "train_df": None,
-                    "test_df": None,
-                    "X_test_tensor": None,
-                    "y_test": None,
-                    "unit_ids": None,
-                    "predictions": None,
-                }
-            # perform scaling on float32 data to halve memory footprint vs float64
-            reshaped = X_test.reshape(-1, X_test.shape[-1])
-            X_scaled = self.scaler.transform(reshaped).astype(np.float32).reshape(X_test.shape)
-            X_tensor = torch.tensor(X_scaled, dtype=torch.float32, device=self.device)
-            with torch.no_grad():
-                predictions = self.model(X_tensor).cpu().numpy().flatten()
-        except Exception as e:
-            print(f"Error building test cache: {e}")
-            return {
-                "train_df": None,
-                "test_df": None,
-                "X_test_tensor": None,
-                "y_test": None,
-                "unit_ids": None,
-                "predictions": None,
-            }
-
-        rul_indexed = rul_df.reset_index(names="unit_id").assign(unit_id=lambda df: df["unit_id"] + 1)
-        rul_indexed = rul_indexed.rename(columns={"RUL": "RUL_final"})
-        prepared_test_df = test_df.copy()
-        last_cycle = test_df.groupby("unit_id")["cycle"].max().rename("max_cycle")
-        prepared_test_df = prepared_test_df.merge(last_cycle.reset_index(), on="unit_id")
-        prepared_test_df["RUL"] = prepared_test_df["max_cycle"] - prepared_test_df["cycle"]
-        prepared_test_df = prepared_test_df.merge(rul_indexed, on="unit_id")
-        prepared_test_df["RUL"] = (prepared_test_df["max_cycle"] - prepared_test_df["cycle"]) + prepared_test_df["RUL_final"]
-        if self.max_rul:
-            prepared_test_df["RUL"] = prepared_test_df["RUL"].clip(upper=self.max_rul)
-
-        return {
-            "train_df": train_df,
-            "test_df": test_df,
-            "rul_df": rul_df,
-            "prepared_train_df": prepared_train_df,
-            "prepared_test_df": prepared_test_df,
-            "feature_columns": feature_columns,
-            "X_test": X_test,
-            "X_test_scaled": X_scaled,
-            "X_test_tensor": X_tensor,
-            "y_test": y_test,
-            "unit_ids": unit_ids,
-            "predictions": predictions,
-            "scaler": self.scaler,
-        }
-
     def _ensure_artifacts(self) -> None:
         if not self.available:
             return
@@ -346,6 +278,7 @@ class ModelApiService:
         losses = [item["loss"] for item in self.history]
         val_rmse = [item["val_rmse"] for item in self.history]
 
+        plt = _get_pyplot()
         plt.figure(figsize=(10, 5))
         plt.plot(epochs, losses, color="#58A6FF", linewidth=2, label="Training Loss (MSE)")
         plt.plot(epochs, val_rmse, color="#39D0D8", linewidth=2, label="Validation RMSE")
@@ -360,7 +293,7 @@ class ModelApiService:
 
     def _plot_predictions_analysis(self) -> None:
         output_path = MODELS_DIR / "predictions_analysis.png"
-        test_cache = self._get_test_cache()
+        test_cache = _get_dataset_cache(self.train_datasets[0])
         y_test = test_cache["y_test"]
         predictions = test_cache["predictions"]
         
@@ -370,6 +303,7 @@ class ModelApiService:
         _, std_pred = predict_with_uncertainty(self.model, test_cache["X_test_tensor"], n_samples=20)
         std_pred = std_pred.flatten()
 
+        plt = _get_pyplot()
         fig, axes = plt.subplots(1, 2, figsize=(14, 5))
         axes[0].scatter(y_test, predictions, alpha=0.7, s=40, color="#58A6FF")
         line_start = min(y_test.min(), predictions.min())
@@ -406,7 +340,7 @@ class ModelApiService:
         if not HAS_CAPTUM or IntegratedGradients is None or not HAS_TORCH or torch is None:
             return {"error": "Captum not installed"}
         
-        X_test_tensor = self._get_test_cache().get("X_test_tensor")
+        X_test_tensor = _get_dataset_cache(self.train_datasets[0]).get("X_test_tensor")
         if X_test_tensor is None or self.model is None:
             return {"error": "Model or test data not available"}
         
@@ -427,18 +361,35 @@ class ModelApiService:
             return {"error": str(e)}
 
     def _compute_uncertainty_summary(self) -> dict[str, float]:
-        test_cache = self._get_test_cache()
-        if not self.available or predict_with_uncertainty is None or test_cache.get("X_test_tensor") is None or self.model is None:
+        if not self.available or predict_with_uncertainty is None or self.model is None:
             return {"averageStd": 0.0, "minStd": 0.0, "maxStd": 0.0}
         
         try:
-            mean_pred, std_pred = predict_with_uncertainty(self.model, test_cache["X_test_tensor"], n_samples=20)
-            del mean_pred
-            std_pred = std_pred.flatten()
+            total_std = 0.0
+            sample_count = 0
+            min_std = float("inf")
+            max_std = float("-inf")
+            for dataset in self.train_datasets:
+                test_cache = _get_dataset_cache(dataset)
+                tensor = test_cache.get("X_test_tensor")
+                if tensor is None:
+                    continue
+                mean_pred, std_pred = predict_with_uncertainty(self.model, tensor, n_samples=20)
+                del mean_pred
+                std_pred = std_pred.flatten()
+                total_std += float(std_pred.sum())
+                sample_count += int(std_pred.size)
+                min_std = min(min_std, float(std_pred.min()))
+                max_std = max(max_std, float(std_pred.max()))
+                del test_cache, tensor, std_pred
+
+            if sample_count == 0:
+                return {"averageStd": 0.0, "minStd": 0.0, "maxStd": 0.0}
+
             return {
-                "averageStd": float(std_pred.mean()),
-                "minStd": float(std_pred.min()),
-                "maxStd": float(std_pred.max()),
+                "averageStd": total_std / sample_count,
+                "minStd": min_std,
+                "maxStd": max_std,
             }
         except Exception:
             return {"averageStd": 0.0, "minStd": 0.0, "maxStd": 0.0}
@@ -447,10 +398,11 @@ class ModelApiService:
         if self._summary_cache is not None:
             return self._summary_cache
 
-        test_cache = self._get_test_cache()
+        test_cache = _get_dataset_cache(self.train_datasets[0])
         self._ensure_artifacts()
-        train_df = test_cache["train_df"]
-        test_df = test_cache["test_df"]
+        sample_engine_ids = [int(x) for x in test_cache["unit_ids"][:10]]
+        del test_cache
+        train_rows, test_rows, train_engines, test_engines = _count_dataset_rows_and_engines(self.train_datasets)
         feature_columns = self.config.get("feature_columns") or []
         uncertainty = self._compute_uncertainty_summary()
 
@@ -495,10 +447,10 @@ class ModelApiService:
                 "experimentMode": self.mode,
             },
             "data": {
-                "trainRows": int(len(train_df)),
-                "testRows": int(len(test_df)),
-                "trainEngines": int(train_df["unit_id"].nunique()),
-                "testEngines": int(test_df["unit_id"].nunique()),
+                "trainRows": train_rows,
+                "testRows": test_rows,
+                "trainEngines": train_engines,
+                "testEngines": test_engines,
                 "operatingSettings": 3,
                 "sensorCount": 21,
                 "retainedFeatureCount": len(feature_columns),
@@ -507,7 +459,7 @@ class ModelApiService:
                 "trainingLossUrl": "/artifacts/training_loss.png",
                 "predictionsAnalysisUrl": "/artifacts/predictions_analysis.png",
             },
-            "sampleEngineIds": [int(x) for x in test_cache["unit_ids"][:10]],
+            "sampleEngineIds": sample_engine_ids,
         }
         self._summary_cache = summary
         return summary
@@ -525,7 +477,7 @@ class ModelApiService:
         if not self.available or not HAS_TORCH or torch is None or not HAS_MODEL or self.model is None or effective_scaler is None:
             return {"error": "Model or scaler not available"}
         
-        feature_count = len(self._get_test_cache().get("feature_columns", []))
+        feature_count = int(self.config.get("input_size", len(self.config.get("feature_columns") or [])))
         if sequence.shape != (self.seq_length, feature_count):
             raise ValueError(
                 f"Expected sequence shape {(self.seq_length, feature_count)}, got {tuple(sequence.shape)}"
@@ -550,7 +502,7 @@ class ModelApiService:
             return {"error": str(e)}
 
     def get_sample_prediction(self, engine_id: int | None = None) -> dict[str, Any]:
-        test_cache = self._get_test_cache()
+        test_cache = _get_dataset_cache(self.train_datasets[0])
         unit_ids = test_cache["unit_ids"]
         index = 0
         if engine_id is not None:
@@ -601,6 +553,7 @@ def _get_dataset_cache(dataset: str) -> dict:
         
         from sklearn.preprocessing import StandardScaler
 
+        _fresh_cache.clear()
         train_df, test_df, rul_df = load_data(dataset)
         _, feature_columns, _ = prepare_train_data(train_df, max_rul=service.max_rul)
 
@@ -628,13 +581,14 @@ def _get_dataset_cache(dataset: str) -> dict:
                 X_train_ds = np.concatenate([X_train_ds, zeros_tr], axis=-1)
             scaler = StandardScaler()
             scaler.fit(X_train_ds.reshape(-1, X_train_ds.shape[-1]))
+            del prepared, X_train_ds
 
         if scaler is None:
             return {"error": "Scaler not available", "predictions": np.array([])}
         
-        X_scaled = scaler.transform(X_test.reshape(-1, X_test.shape[-1])).reshape(X_test.shape)
+        X_scaled = scaler.transform(X_test.reshape(-1, X_test.shape[-1])).astype(np.float32, copy=False).reshape(X_test.shape)
 
-        X_tensor = torch.tensor(X_scaled, dtype=torch.float32, device=service.device)
+        X_tensor = torch.as_tensor(X_scaled, dtype=torch.float32, device=service.device)
         with torch.no_grad():
             if service.model is None:
                 return {"error": "Model is None", "predictions": np.array([])}
@@ -656,11 +610,7 @@ def _get_dataset_cache(dataset: str) -> dict:
 
     cache = {
         "dataset": dataset,
-        "train_df": train_df,
-        "test_df": test_df,
-        "rul_df": rul_df,
         "X_test": X_test,
-        "X_test_scaled": X_scaled,
         "X_test_tensor": X_tensor,
         "y_test": y_test,
         "unit_ids": unit_ids,
@@ -768,7 +718,7 @@ def explorer() -> Any:
             return jsonify({"error": "Data loading not available"}), 503
         
         cache = _get_dataset_cache(dataset)
-        train_df, test_df, _ = load_data(dataset)
+        _, test_df, _ = load_data(dataset)
         latest_rows = test_df.sort_values(["unit_id", "cycle"]).groupby("unit_id").tail(1)
 
         prediction_by_engine = {
@@ -991,10 +941,7 @@ def engine_history() -> Any:
         actual_ruls = engine_data["RUL"].tolist()
 
         feature_cols = cache.get("feature_columns", [])
-        raw_test_df = cache.get("test_df")
-        raw_engine_data = None
-        if raw_test_df is not None and engine_id in raw_test_df["unit_id"].values:
-            raw_engine_data = raw_test_df[raw_test_df["unit_id"] == engine_id].sort_values("cycle")
+        raw_engine_data = engine_data if engine_id in engine_data["unit_id"].values else None
 
         sensor_data = {}
         for col in feature_cols:
@@ -1099,14 +1046,11 @@ def api_explain() -> Any:
         })
 
     def _fallback_importance() -> Any:
-        cache = service._get_test_cache()
-        # prefer explicit feature list from cache/config, but infer from prepared data if missing
+        cache = _get_dataset_cache(service.train_datasets[0])
         feature_columns = cache.get("feature_columns") or service.config.get("feature_columns") or []
-        prepared_train_df = cache.get("prepared_train_df")
         prepared_test_df = cache.get("prepared_test_df")
 
-        # If no explicit features provided, infer from prepared_train_df or prepared_test_df
-        df_for_infer = prepared_train_df if prepared_train_df is not None else prepared_test_df
+        df_for_infer = prepared_test_df
         if (not feature_columns or len(feature_columns) == 0) and df_for_infer is not None:
             # infer numeric feature columns excluding standard meta columns
             meta = {"RUL", "unit_id", "cycle", "max_cycle", "RUL_final"}
@@ -1152,7 +1096,7 @@ def api_explain() -> Any:
             return jsonify({"error": f"fallback failed: {exc}"}), 500
 
     if HAS_CAPTUM and IntegratedGradients is not None and HAS_TORCH and torch is not None and service.available:
-        X_test_tensor = service._get_test_cache().get("X_test_tensor")
+        X_test_tensor = _get_dataset_cache(service.train_datasets[0]).get("X_test_tensor")
         if X_test_tensor is None or service.model is None:
             return _fallback_importance()
 
