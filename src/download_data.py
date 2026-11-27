@@ -8,7 +8,7 @@ import requests
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 NASA_CMAPSS_ZIP_URL = "https://data.nasa.gov/docs/legacy/CMAPSSData.zip"
-DEFAULT_DATASETS = ("FD001",)
+DEFAULT_DATASETS = ("FD001", "FD002", "FD003", "FD004")
 
 
 def download_zip(destination: Path) -> None:
