@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import time
 import zipfile
 from pathlib import Path
 
@@ -12,12 +13,31 @@ DEFAULT_DATASETS = ("FD001", "FD002", "FD003", "FD004")
 
 
 def download_zip(destination: Path) -> None:
-    response = requests.get(NASA_CMAPSS_ZIP_URL, stream=True, timeout=60)
-    response.raise_for_status()
-    with destination.open("wb") as handle:
-        for chunk in response.iter_content(chunk_size=1024 * 1024):
-            if chunk:
-                handle.write(chunk)
+    temporary_path = destination.with_suffix(destination.suffix + ".part")
+    for attempt in range(1, 4):
+        try:
+            with requests.get(
+                NASA_CMAPSS_ZIP_URL,
+                stream=True,
+                timeout=(30, 120),
+            ) as response:
+                response.raise_for_status()
+                with temporary_path.open("wb") as handle:
+                    for chunk in response.iter_content(chunk_size=1024 * 1024):
+                        if chunk:
+                            handle.write(chunk)
+            temporary_path.replace(destination)
+            return
+        except requests.RequestException as exc:
+            if temporary_path.exists():
+                temporary_path.unlink()
+            if attempt == 3:
+                raise RuntimeError(
+                    f"NASA C-MAPSS download failed after {attempt} attempts."
+                ) from exc
+            delay = 5 * attempt
+            print(f"Download attempt {attempt} failed; retrying in {delay}s.")
+            time.sleep(delay)
 
 
 def extract_datasets(zip_path: Path, destination: Path, datasets: tuple[str, ...]) -> None:
