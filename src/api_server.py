@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from threading import Lock
 from typing import Any
 
 import matplotlib
@@ -126,6 +127,9 @@ class ModelApiService:
         self.history_path = MODELS_DIR / "training_history.json"
         self.device = get_device()
         self.available = True
+        self._test_cache: dict[str, Any] = {}
+        self._test_cache_ready = False
+        self._test_cache_lock = Lock()
         
         # Check if required files exist and torch is available
         if not HAS_TORCH:
@@ -208,9 +212,15 @@ class ModelApiService:
             self.scaler = pickle.load(handle)
 
         self._summary_cache: dict[str, Any] | None = None
-        self._test_cache = self._build_test_cache()
         self._per_dataset_cache: dict[str, dict] = {}
-        self._ensure_artifacts()
+
+    def _get_test_cache(self) -> dict[str, Any]:
+        if not self._test_cache_ready:
+            with self._test_cache_lock:
+                if not self._test_cache_ready:
+                    self._test_cache = self._build_test_cache()
+                    self._test_cache_ready = True
+        return self._test_cache
 
     def _load_history(self) -> list[dict[str, Any]]:
         if self.history_path.exists():
@@ -323,8 +333,10 @@ class ModelApiService:
     def _ensure_artifacts(self) -> None:
         if not self.available:
             return
-        self._plot_training_history()
-        self._plot_predictions_analysis()
+        if not (MODELS_DIR / "training_loss.png").exists():
+            self._plot_training_history()
+        if not (MODELS_DIR / "predictions_analysis.png").exists():
+            self._plot_predictions_analysis()
 
     def _plot_training_history(self) -> None:
         if not self.history:
@@ -348,13 +360,14 @@ class ModelApiService:
 
     def _plot_predictions_analysis(self) -> None:
         output_path = MODELS_DIR / "predictions_analysis.png"
-        y_test = self._test_cache["y_test"]
-        predictions = self._test_cache["predictions"]
+        test_cache = self._get_test_cache()
+        y_test = test_cache["y_test"]
+        predictions = test_cache["predictions"]
         
-        if predict_with_uncertainty is None or self._test_cache["X_test_tensor"] is None or self.model is None:
+        if predict_with_uncertainty is None or test_cache["X_test_tensor"] is None or self.model is None:
             return
             
-        _, std_pred = predict_with_uncertainty(self.model, self._test_cache["X_test_tensor"], n_samples=20)
+        _, std_pred = predict_with_uncertainty(self.model, test_cache["X_test_tensor"], n_samples=20)
         std_pred = std_pred.flatten()
 
         fig, axes = plt.subplots(1, 2, figsize=(14, 5))
@@ -393,7 +406,7 @@ class ModelApiService:
         if not HAS_CAPTUM or IntegratedGradients is None or not HAS_TORCH or torch is None:
             return {"error": "Captum not installed"}
         
-        X_test_tensor = self._test_cache.get("X_test_tensor")
+        X_test_tensor = self._get_test_cache().get("X_test_tensor")
         if X_test_tensor is None or self.model is None:
             return {"error": "Model or test data not available"}
         
@@ -414,11 +427,12 @@ class ModelApiService:
             return {"error": str(e)}
 
     def _compute_uncertainty_summary(self) -> dict[str, float]:
-        if not self.available or predict_with_uncertainty is None or self._test_cache.get("X_test_tensor") is None or self.model is None:
+        test_cache = self._get_test_cache()
+        if not self.available or predict_with_uncertainty is None or test_cache.get("X_test_tensor") is None or self.model is None:
             return {"averageStd": 0.0, "minStd": 0.0, "maxStd": 0.0}
         
         try:
-            mean_pred, std_pred = predict_with_uncertainty(self.model, self._test_cache["X_test_tensor"], n_samples=20)
+            mean_pred, std_pred = predict_with_uncertainty(self.model, test_cache["X_test_tensor"], n_samples=20)
             del mean_pred
             std_pred = std_pred.flatten()
             return {
@@ -433,8 +447,10 @@ class ModelApiService:
         if self._summary_cache is not None:
             return self._summary_cache
 
-        train_df = self._test_cache["train_df"]
-        test_df = self._test_cache["test_df"]
+        test_cache = self._get_test_cache()
+        self._ensure_artifacts()
+        train_df = test_cache["train_df"]
+        test_df = test_cache["test_df"]
         feature_columns = self.config.get("feature_columns") or []
         uncertainty = self._compute_uncertainty_summary()
 
@@ -491,7 +507,7 @@ class ModelApiService:
                 "trainingLossUrl": "/artifacts/training_loss.png",
                 "predictionsAnalysisUrl": "/artifacts/predictions_analysis.png",
             },
-            "sampleEngineIds": [int(x) for x in self._test_cache["unit_ids"][:10]],
+            "sampleEngineIds": [int(x) for x in test_cache["unit_ids"][:10]],
         }
         self._summary_cache = summary
         return summary
@@ -509,7 +525,7 @@ class ModelApiService:
         if not self.available or not HAS_TORCH or torch is None or not HAS_MODEL or self.model is None or effective_scaler is None:
             return {"error": "Model or scaler not available"}
         
-        feature_count = len(self._test_cache.get("feature_columns", []))
+        feature_count = len(self._get_test_cache().get("feature_columns", []))
         if sequence.shape != (self.seq_length, feature_count):
             raise ValueError(
                 f"Expected sequence shape {(self.seq_length, feature_count)}, got {tuple(sequence.shape)}"
@@ -534,7 +550,8 @@ class ModelApiService:
             return {"error": str(e)}
 
     def get_sample_prediction(self, engine_id: int | None = None) -> dict[str, Any]:
-        unit_ids = self._test_cache["unit_ids"]
+        test_cache = self._get_test_cache()
+        unit_ids = test_cache["unit_ids"]
         index = 0
         if engine_id is not None:
             matches = np.where(unit_ids == engine_id)[0]
@@ -542,8 +559,8 @@ class ModelApiService:
                 raise KeyError(f"Engine {engine_id} is not available in the test set.")
             index = int(matches[0])
 
-        sequence = self._test_cache["X_test"][index]
-        actual_rul = float(self._test_cache["y_test"][index])
+        sequence = test_cache["X_test"][index]
+        actual_rul = float(test_cache["y_test"][index])
         prediction = self.predict_sequence(sequence, mc_samples=20)
         prediction.update(
             {
@@ -1082,7 +1099,7 @@ def api_explain() -> Any:
         })
 
     def _fallback_importance() -> Any:
-        cache = service._test_cache
+        cache = service._get_test_cache()
         # prefer explicit feature list from cache/config, but infer from prepared data if missing
         feature_columns = cache.get("feature_columns") or service.config.get("feature_columns") or []
         prepared_train_df = cache.get("prepared_train_df")
@@ -1135,7 +1152,7 @@ def api_explain() -> Any:
             return jsonify({"error": f"fallback failed: {exc}"}), 500
 
     if HAS_CAPTUM and IntegratedGradients is not None and HAS_TORCH and torch is not None and service.available:
-        X_test_tensor = service._test_cache.get("X_test_tensor")
+        X_test_tensor = service._get_test_cache().get("X_test_tensor")
         if X_test_tensor is None or service.model is None:
             return _fallback_importance()
 
