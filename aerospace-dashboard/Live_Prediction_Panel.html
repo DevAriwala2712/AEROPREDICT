@@ -376,7 +376,7 @@
 Chart.defaults.color = '#71717a';
 Chart.defaults.borderColor = '#27272a';
 
-const DEFAULT_API = 'http://127.0.0.1:8000';
+const DEFAULT_API = window.location.origin;
 
 function getApiBase() {
   if (window.AeroPredictUi && typeof window.AeroPredictUi.getApiBase === 'function') {

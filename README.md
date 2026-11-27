@@ -2,6 +2,8 @@
 
 AeroPredict is an end-to-end predictive maintenance project for aircraft engines using the NASA C-MAPSS benchmark. It includes a deep learning training pipeline, evaluation tooling, a Flask API server, and a multi-page web dashboard for model diagnostics and live inference.
 
+**Live deployment:** [Open the AeroPredict dashboard](https://aeropredict-g33e.onrender.com)
+
 ## Table of Contents
 
 - Project Overview
