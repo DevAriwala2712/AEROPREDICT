@@ -271,7 +271,7 @@
 <script>
 const API = (window.AeroPredictUi && typeof window.AeroPredictUi.getApiBase === 'function')
   ? window.AeroPredictUi.getApiBase()
-  : 'http://127.0.0.1:8000';
+  : window.location.origin;
 const insightsState = {
   summary: null,
   history: [],

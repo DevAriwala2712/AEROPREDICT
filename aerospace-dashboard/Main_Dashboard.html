@@ -257,7 +257,7 @@ Chart.defaults.borderColor = '#27272a';
 
 let scatterChart, lossChart, errorChart;
 
-const DEFAULT_API_BASE = 'http://127.0.0.1:8000';
+const DEFAULT_API_BASE = window.location.origin;
 const DATASET_NAMES = ['FD001', 'FD002', 'FD003', 'FD004'];
 
 function getApiBase() {

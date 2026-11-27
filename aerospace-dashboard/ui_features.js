@@ -1,5 +1,5 @@
 (() => {
-  const DEFAULT_API_BASE = "http://127.0.0.1:8000";
+  const DEFAULT_API_BASE = window.location.origin;
   const SETTINGS_KEY = "aeropredict-ui-settings";
   const NOTIFICATION_DISMISS_KEY = "aeropredict-notifications-dismissed-at";
   const DEFAULT_SETTINGS = {
@@ -19,7 +19,9 @@
 
   function sanitizeSettings(candidate) {
     const source = candidate && typeof candidate === "object" ? candidate : {};
-    const apiBase = String(source.apiBase || DEFAULT_API_BASE).trim().replace(/\/$/, "") || DEFAULT_API_BASE;
+    const savedApiBase = String(source.apiBase || "").trim().replace(/\/$/, "");
+    const isLocalDefault = savedApiBase === "http://127.0.0.1:8000" || savedApiBase === "http://localhost:8000";
+    const apiBase = !savedApiBase || isLocalDefault ? DEFAULT_API_BASE : savedApiBase;
     const parsedSeconds = Number(source.autoRefreshSeconds);
     const autoRefreshSeconds = Number.isFinite(parsedSeconds)
       ? Math.min(300, Math.max(15, Math.round(parsedSeconds)))
@@ -632,7 +634,7 @@
 
         <div class="aeropredict-setting-field">
           <label for="aeropredict-settings-api">API Base URL</label>
-          <input id="aeropredict-settings-api" type="text" placeholder="http://127.0.0.1:8000" />
+          <input id="aeropredict-settings-api" type="text" placeholder="https://aeropredict-g33e.onrender.com" />
         </div>
 
         <div class="aeropredict-setting-field">

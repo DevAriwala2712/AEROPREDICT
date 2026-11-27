@@ -341,13 +341,16 @@
 </div>
 <script>
 const SETTINGS_KEY = 'aeropredict-ui-settings';
-const DEFAULT_API = 'http://127.0.0.1:8000';
+const DEFAULT_API = window.location.origin;
 let EXPLORER_API = getConfiguredApiBase();
 
 function getConfiguredApiBase() {
     try {
         const parsed = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
         const configured = String(parsed.apiBase || '').trim().replace(/\/$/, '');
+        if (configured === 'http://127.0.0.1:8000' || configured === 'http://localhost:8000') {
+            return DEFAULT_API;
+        }
         return configured || DEFAULT_API;
     } catch {
         return DEFAULT_API;

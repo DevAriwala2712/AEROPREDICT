@@ -274,7 +274,7 @@
 </div>
 <script>
 (() => {
-    const DEFAULT_API_BASE = 'http://127.0.0.1:8000';
+    const DEFAULT_API_BASE = window.location.origin;
 
     function getApiBase() {
         if (window.AeroPredictUi && typeof window.AeroPredictUi.getApiBase === 'function') {
