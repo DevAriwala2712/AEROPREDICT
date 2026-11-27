@@ -231,6 +231,8 @@ Core endpoints used by dashboards:
 - `GET /api/notifications?dataset=FD00X`
 - `POST /api/predict` (supports dataset-aware prediction payload)
 
+The fleet summary leaves aggregate uncertainty fields `null` to avoid expensive full-dataset Monte Carlo inference. Individual sample predictions still include uncertainty.
+
 Static/dashboard routes:
 
 - `/Main_Dashboard.html`

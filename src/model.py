@@ -23,16 +23,26 @@ class LSTMRULPredictor(nn.Module):
         return out
 
 
-def predict_with_uncertainty(model, x, n_samples=100):
+def predict_with_uncertainty(model, x, n_samples=100, batch_size=32):
+    if batch_size < 1:
+        raise ValueError("batch_size must be positive")
+
     was_training = model.training
     model.train()
-    predictions = []
-    for _ in range(n_samples):
-        pred = model(x)
-        predictions.append(pred.detach().cpu().numpy())
-    if not was_training:
-        model.eval()
-    predictions = np.array(predictions)
-    mean = predictions.mean(axis=0)
-    std = predictions.std(axis=0)
-    return mean, std
+    means = []
+    standard_deviations = []
+    try:
+        with torch.inference_mode():
+            for start in range(0, x.size(0), batch_size):
+                batch = x[start:start + batch_size]
+                predictions = [
+                    model(batch).cpu().numpy()
+                    for _ in range(n_samples)
+                ]
+                predictions = np.stack(predictions)
+                means.append(predictions.mean(axis=0))
+                standard_deviations.append(predictions.std(axis=0))
+    finally:
+        model.train(was_training)
+
+    return np.concatenate(means, axis=0), np.concatenate(standard_deviations, axis=0)

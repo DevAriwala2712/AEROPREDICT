@@ -360,40 +360,6 @@ class ModelApiService:
         except Exception as e:
             return {"error": str(e)}
 
-    def _compute_uncertainty_summary(self) -> dict[str, float]:
-        if not self.available or predict_with_uncertainty is None or self.model is None:
-            return {"averageStd": 0.0, "minStd": 0.0, "maxStd": 0.0}
-        
-        try:
-            total_std = 0.0
-            sample_count = 0
-            min_std = float("inf")
-            max_std = float("-inf")
-            for dataset in self.train_datasets:
-                test_cache = _get_dataset_cache(dataset)
-                tensor = test_cache.get("X_test_tensor")
-                if tensor is None:
-                    continue
-                mean_pred, std_pred = predict_with_uncertainty(self.model, tensor, n_samples=20)
-                del mean_pred
-                std_pred = std_pred.flatten()
-                total_std += float(std_pred.sum())
-                sample_count += int(std_pred.size)
-                min_std = min(min_std, float(std_pred.min()))
-                max_std = max(max_std, float(std_pred.max()))
-                del test_cache, tensor, std_pred
-
-            if sample_count == 0:
-                return {"averageStd": 0.0, "minStd": 0.0, "maxStd": 0.0}
-
-            return {
-                "averageStd": total_std / sample_count,
-                "minStd": min_std,
-                "maxStd": max_std,
-            }
-        except Exception:
-            return {"averageStd": 0.0, "minStd": 0.0, "maxStd": 0.0}
-
     def get_summary(self) -> dict[str, Any]:
         if self._summary_cache is not None:
             return self._summary_cache
@@ -404,7 +370,6 @@ class ModelApiService:
         del test_cache
         train_rows, test_rows, train_engines, test_engines = _count_dataset_rows_and_engines(self.train_datasets)
         feature_columns = self.config.get("feature_columns") or []
-        uncertainty = self._compute_uncertainty_summary()
 
         test_metrics = self.metrics.get("test_metrics", {})
         if test_metrics:
@@ -435,9 +400,10 @@ class ModelApiService:
                 "testRmse": primary_rmse,
                 "testMae": primary_mae,
                 "nasaScore": primary_nasa,
-                "averageUncertainty": uncertainty["averageStd"],
-                "uncertaintyMin": uncertainty["minStd"],
-                "uncertaintyMax": uncertainty["maxStd"],
+                # Aggregate uncertainty is omitted to keep the fleet summary lightweight.
+                "averageUncertainty": None,
+                "uncertaintyMin": None,
+                "uncertaintyMax": None,
                 "perDatasetMetrics": {k: {"rmse": float(v["rmse"]), "mae": float(v["mae"])} for k, v in test_metrics.items()},
             },
             "metadata": {
