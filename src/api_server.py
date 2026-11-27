@@ -15,15 +15,13 @@ import pickle
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
-# Optional PyTorch import
 try:
     import torch
     HAS_TORCH = True
 except ImportError:
     HAS_TORCH = False
-    torch = None  # type: ignore
+    torch = None
 
-# Optional model imports
 try:
     from data_loader import (
         DEFAULT_DATASET,
